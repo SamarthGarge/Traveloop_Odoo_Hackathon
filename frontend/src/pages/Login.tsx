@@ -1,9 +1,8 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
-import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
-import PhoneInput, { isValidPhoneNumber } from 'react-phone-number-input';
-import 'react-phone-number-input/style.css';
+import { Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { extractError } from '../lib/api';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -11,32 +10,8 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [fieldErrors, setFieldErrors] = useState<{ identifier?: string; password?: string }>({});
-
-  const validateField = (field: string, val: string, method: 'email' | 'phone') => {
-    let err = '';
-    if (field === 'identifier') {
-      if (!val) err = method === 'email' ? 'Email is required' : 'Phone number is required';
-      else if (method === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) err = 'Invalid email format';
-      else if (method === 'phone' && !isValidPhoneNumber(val)) err = 'Invalid phone number';
-    } else if (field === 'password') {
-      if (!val) err = 'Password is required';
-      else if (val.length < 8) err = 'Password must be at least 8 characters';
-    }
-    return err;
-  };
-
-  const handleIdentifierChange = (val: string) => {
-    setIdentifier(val);
-    setFieldErrors(prev => ({ ...prev, identifier: validateField('identifier', val, loginMethod) }));
-  };
-
-  const handlePasswordChange = (val: string) => {
-    setPassword(val);
-    setFieldErrors(prev => ({ ...prev, password: validateField('password', val, loginMethod) }));
-  };
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,19 +19,10 @@ export default function Login() {
       setError('Please fill in all fields');
       return;
     }
-    
-    if (loginMethod === 'phone' && !isValidPhoneNumber(identifier)) {
-      setError('Please enter a valid phone number');
-      return;
-    }
-    
-    setIsLoading(true);
-    // Simulate async auth (replace with real API call when backend is wired)
-    await new Promise((res) => setTimeout(res, 800));
-    const success = login(identifier, password);
-    setIsLoading(false);
-    
-    if (success) {
+    setError('');
+    setLoading(true);
+    try {
+      await login(email, password);
       navigate('/dashboard');
     } catch (err) {
       setError(extractError(err));
@@ -74,29 +40,30 @@ export default function Login() {
 
       <div className="w-full max-w-md bg-white rounded-2xl p-10 relative z-10 shadow-xl">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-[#0b1c30] tracking-tight mb-1 font-heading">Traveloop</h1>
+          <h1 className="text-2xl font-bold text-[#0b1c30] tracking-tight mb-1 font-['Montserrat']">Traveloop</h1>
           <p className="text-[#94a3b8] text-sm">Your journey begins here.</p>
         </div>
 
-        <div className="flex p-1 bg-[#f1f5f9] rounded-xl mb-6">
-          <button
-            type="button"
-            onClick={() => { setLoginMethod('email'); setIdentifier(''); setError(''); setFieldErrors({}); }}
-            className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${loginMethod === 'email' ? 'bg-white text-[#0b1c30] shadow-sm' : 'text-[#94a3b8] hover:text-[#64748B]'}`}
-          >
-            Email
-          </button>
-          <button
-            type="button"
-            onClick={() => { setLoginMethod('phone'); setIdentifier(''); setError(''); setFieldErrors({}); }}
-            className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${loginMethod === 'phone' ? 'bg-white text-[#0b1c30] shadow-sm' : 'text-[#94a3b8] hover:text-[#64748B]'}`}
-          >
-            Phone
-          </button>
-        </div>
+        {error && (
+          <div className="mb-6 p-3 rounded-xl bg-[#fef2f2] text-[#dc2626] text-sm border border-[#dc2626]/10">
+            {error}
+          </div>
+        )}
 
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-xs font-medium text-[#64748B] mb-1.5">Email Address</label>
+            <div className="relative">
+              <Mail className="w-5 h-5 text-[#94a3b8] absolute left-4 top-1/2 -translate-y-1/2" />
+              <input
+                id="login-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="voyager@traveloop.com"
+                className="input-field pl-11"
+                autoComplete="email"
               />
-              {fieldErrors.identifier && <p className="text-red-500 text-[10px] mt-1">{fieldErrors.identifier}</p>}
             </div>
           </div>
 
@@ -113,9 +80,10 @@ export default function Login() {
                 id="login-password"
                 type={showPassword ? 'text' : 'password'}
                 value={password}
-                onChange={(e) => handlePasswordChange(e.target.value)}
-                placeholder="••••••••"
-                className={`input-field pl-11 pr-12 ${fieldErrors.password ? 'border-red-500 focus:ring-red-500/20' : ''}`}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="ΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇó"
+                className="input-field pl-11 pr-12"
+                autoComplete="current-password"
               />
               <button
                 type="button"
@@ -125,25 +93,15 @@ export default function Login() {
                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
             </div>
-            {fieldErrors.password && <p className="text-red-500 text-[10px] mt-1">{fieldErrors.password}</p>}
           </div>
 
           <button
+            id="login-submit"
             type="submit"
-            disabled={!identifier || !password || isLoading || !!fieldErrors.identifier || !!fieldErrors.password}
-            className="w-full bg-[#E8604C] hover:bg-[#ae311e] disabled:opacity-60 disabled:cursor-not-allowed text-white py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all shadow-sm hover:shadow-md"
+            disabled={loading}
+            className="w-full bg-[#E8604C] hover:bg-[#ae311e] text-white py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center transition-all shadow-sm hover:shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {isLoading ? (
-              <>
-                <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
-                </svg>
-                Signing in...
-              </>
-            ) : (
-              'Sign In'
-            )}
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Sign In'}
           </button>
         </form>
 
