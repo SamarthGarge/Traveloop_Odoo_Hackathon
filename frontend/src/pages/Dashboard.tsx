@@ -7,8 +7,11 @@ import {
   Calendar,
   ArrowRight,
   TrendingUp,
-  Wallet,
   Compass,
+  Heart,
+  Plane,
+  MoreHorizontal,
+  Users,
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 
@@ -16,228 +19,218 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { user, trips } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
-  const [groupBy, setGroupBy] = useState('All');
 
   const upcomingTrips = trips.filter((t) => t.status === 'upcoming');
   const ongoingTrips = trips.filter((t) => t.status === 'ongoing');
+  const activeTrip = [...ongoingTrips, ...upcomingTrips][0];
 
   const filteredDestinations = useMemo(() => {
-    let filtered = destinations;
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (d) =>
-          d.name.toLowerCase().includes(q) ||
-          d.country.toLowerCase().includes(q) ||
-          d.activities.some((a) => a.toLowerCase().includes(q))
-      );
-    }
-    if (groupBy !== 'All') {
-      filtered = filtered.filter((d) =>
-        d.activities.includes(groupBy)
-      );
-    }
-    return filtered;
-  }, [searchQuery, groupBy]);
-
-  const quickStats = [
-    { label: 'Total Trips', value: trips.length, icon: Compass, color: '#5b7f74' },
-    { label: 'Upcoming', value: upcomingTrips.length, icon: Calendar, color: '#ffcc66' },
-    { label: 'Ongoing', value: ongoingTrips.length, icon: TrendingUp, color: '#ff9966' },
-    { label: 'Total Budget', value: `$${trips.reduce((a, t) => a + t.budget, 0).toLocaleString()}`, icon: Wallet, color: '#66cc99' },
-  ];
+    if (!searchQuery) return destinations;
+    const q = searchQuery.toLowerCase();
+    return destinations.filter(
+      (d) =>
+        d.name.toLowerCase().includes(q) ||
+        d.country.toLowerCase().includes(q) ||
+        d.activities.some((a) => a.toLowerCase().includes(q))
+    );
+  }, [searchQuery]);
 
   return (
-    <div className="min-h-screen bg-[#f4f4f0]">
-      {/* Hero Banner */}
-      <div className="relative h-[360px] overflow-hidden">
-        <img
-          src="/images/dest-paris.jpg"
-          alt="Banner"
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#00202a]/90 via-[#00202a]/40 to-transparent" />
-        <div className="absolute bottom-0 left-0 right-0 p-6 lg:p-10">
-          <h1 className="text-3xl lg:text-4xl font-bold text-white mb-2">
-            Welcome back, {user?.firstName || 'Traveler'}!
+    <div className="page-transition">
+      {/* ── Welcome Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-2xl lg:text-3xl font-bold text-[#0b1c30] font-['Montserrat']">
+            Welcome back, {user?.firstName || 'Alex'}!
           </h1>
-          <p className="text-white/70 text-lg">
-            Where will your next adventure take you?
+          <p className="text-[#64748B] text-sm mt-1">
+            Your intelligent concierge is ready to help you explore.
           </p>
         </div>
+        <button
+          onClick={() => navigate('/trips/new')}
+          className="btn-primary self-start"
+        >
+          <Plane className="w-4 h-4" />
+          Plan a New Trip
+        </button>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Quick Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {quickStats.map((stat) => (
-            <div
-              key={stat.label}
-              className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 card-hover"
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center"
-                  style={{ backgroundColor: `${stat.color}15` }}
-                >
-                  <stat.icon className="w-5 h-5" style={{ color: stat.color }} />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-[#1a1a1a]">{stat.value}</p>
-                  <p className="text-xs text-gray-500">{stat.label}</p>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* ── Left Column (2/3) ── */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Continue Planning Card */}
+          {activeTrip ? (
+            <div>
+              <h2 className="text-lg font-bold text-[#0b1c30] mb-3 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#E8604C]" />
+                Continue Planning
+              </h2>
+              <div className="card overflow-hidden">
+                <div className="flex flex-col sm:flex-row">
+                  <div className="sm:w-56 h-44 sm:h-auto flex-shrink-0 relative">
+                    <img src={activeTrip.coverImage} alt={activeTrip.name} className="w-full h-full object-cover" />
+                    <div className="absolute top-3 left-3">
+                      <span className={`badge ${activeTrip.status === 'ongoing' ? 'badge-coral' : 'badge-warning'}`}>
+                        <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                        {activeTrip.status === 'ongoing' ? 'In Progress' : 'Upcoming'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex-1 p-5">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h3 className="text-xl font-bold text-[#0b1c30] font-['Montserrat']">{activeTrip.name}</h3>
+                        <p className="text-sm text-[#64748B] mt-0.5">
+                          {activeTrip.startDate} - {activeTrip.endDate} • {activeTrip.sections?.length || 6} Days
+                        </p>
+                      </div>
+                      <button className="p-1.5 rounded-lg hover:bg-[#f1f5f9] text-[#94a3b8] transition-colors">
+                        <MoreHorizontal className="w-5 h-5" />
+                      </button>
+                    </div>
+
+                    {/* Flight route */}
+                    <div className="flex items-center gap-3 mt-4 text-sm text-[#64748B]">
+                      <div className="flex items-center gap-1.5">
+                        <Plane className="w-4 h-4 rotate-[-45deg] text-[#E8604C]" />
+                        <span className="font-medium text-[#0b1c30]">JFK</span>
+                      </div>
+                      <div className="flex-1 border-t border-dashed border-[#e2e8f0] relative">
+                        <Plane className="w-3 h-3 text-[#94a3b8] absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2" />
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Plane className="w-4 h-4 rotate-[135deg] text-[#001b26]" />
+                        <span className="font-medium text-[#0b1c30]">CDG</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between mt-5">
+                      <div className="flex -space-x-2">
+                        <div className="w-7 h-7 rounded-full bg-[#E8604C] flex items-center justify-center text-white text-[10px] font-bold border-2 border-white">
+                          {user?.firstName?.[0] || 'A'}
+                        </div>
+                        <div className="w-7 h-7 rounded-full bg-[#001b26] flex items-center justify-center text-white text-[10px] font-bold border-2 border-white">+2</div>
+                      </div>
+                      <button 
+                        onClick={() => navigate('/itinerary/view')}
+                        className="text-sm font-semibold text-[#E8604C] hover:text-[#ae311e] flex items-center gap-1 transition-colors"
+                      >
+                        Resume Planning <ArrowRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          ))}
-        </div>
-
-        {/* Search Bar */}
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-8">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search destinations, activities, or cities..."
-                className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#ffcc66] focus:border-transparent"
-              />
-            </div>
-            <div className="flex gap-2">
-              <select
-                value={groupBy}
-                onChange={(e) => setGroupBy(e.target.value)}
-                className="px-4 py-3 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#ffcc66]"
-              >
-                <option value="All">All Activities</option>
-                <option value="Sightseeing">Sightseeing</option>
-                <option value="Food Tours">Food Tours</option>
-                <option value="Museums">Museums</option>
-                <option value="Beaches">Beaches</option>
-                <option value="Adventure">Adventure</option>
-                <option value="Nature">Nature</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Top Regional Selections */}
-        <div className="mb-10">
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-xl font-bold text-[#1a1a1a]">Top Regional Selections</h2>
-            <button
-              onClick={() => navigate('/search')}
-              className="text-sm text-[#5b7f74] hover:text-[#00202a] font-medium flex items-center gap-1"
-            >
-              View all <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {filteredDestinations.slice(0, 10).map((dest) => (
-              <button
-                key={dest.id}
-                onClick={() => navigate('/trips/new')}
-                className="group relative rounded-xl overflow-hidden aspect-[3/4] card-hover text-left"
-              >
-                <img
-                  src={dest.image}
-                  alt={dest.name}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                <div className="absolute bottom-0 left-0 right-0 p-3">
-                  <h3 className="text-white font-semibold text-sm">{dest.name}</h3>
-                  <div className="flex items-center gap-1 text-white/70 text-xs">
-                    <MapPin className="w-3 h-3" />
-                    {dest.country}
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Recent / Upcoming Trips */}
-        <div className="mb-10">
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-xl font-bold text-[#1a1a1a]">Your Trips</h2>
-            <div className="flex gap-2">
-              <button
-                onClick={() => navigate('/trips')}
-                className="text-sm text-[#5b7f74] hover:text-[#00202a] font-medium flex items-center gap-1"
-              >
-                View all <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          {upcomingTrips.length === 0 && ongoingTrips.length === 0 ? (
-            <div className="bg-white rounded-xl p-8 text-center shadow-sm border border-gray-100">
-              <Compass className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500 mb-3">No trips planned yet</p>
+          ) : (
+            <div className="card p-8 text-center">
+              <Compass className="w-12 h-12 text-[#e2e8f0] mx-auto mb-3" />
+              <p className="text-[#64748B] mb-4">No trips planned yet. Start your journey!</p>
               <button onClick={() => navigate('/trips/new')} className="btn-primary">
                 Plan Your First Trip
               </button>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[...ongoingTrips, ...upcomingTrips].map((trip) => (
+          )}
+
+          {/* Recommended Destinations */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-bold text-[#0b1c30]">Recommended for You</h2>
+              <button
+                onClick={() => navigate('/search')}
+                className="text-sm text-[#64748B] hover:text-[#0b1c30] font-medium flex items-center gap-1 transition-colors"
+              >
+                View All <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              {filteredDestinations.slice(0, 3).map((dest) => (
                 <button
-                  key={trip.id}
-                  onClick={() => navigate('/itinerary/view')}
-                  className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 card-hover text-left"
+                  key={dest.id}
+                  onClick={() => navigate('/trips/new')}
+                  className="group relative rounded-2xl overflow-hidden aspect-[4/5] text-left"
                 >
-                  <div className="relative h-40">
-                    <img src={trip.coverImage} alt={trip.name} className="w-full h-full object-cover" />
-                    <div className="absolute top-3 left-3">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
-                        trip.status === 'ongoing'
-                          ? 'bg-green-500 text-white'
-                          : trip.status === 'upcoming'
-                          ? 'bg-[#ffcc66] text-[#00202a]'
-                          : 'bg-gray-500 text-white'
-                      }`}>
-                        {trip.status === 'ongoing' ? 'Ongoing' : trip.status === 'upcoming' ? 'Upcoming' : 'Completed'}
+                  <img
+                    src={dest.image}
+                    alt={dest.name}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                  
+                  {/* Save Button */}
+                  <button className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center text-[#64748B] hover:text-[#E8604C] transition-colors z-10">
+                    <Heart className="w-4 h-4" />
+                  </button>
+                  
+                  <div className="absolute bottom-0 left-0 right-0 p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="text-white font-bold text-base font-['Montserrat']">{dest.name},</h3>
+                      <span className="text-white/80 text-sm">{dest.country}</span>
+                    </div>
+                    <p className="text-white/60 text-xs">{dest.activities.slice(0, 3).join(' • ')}</p>
+                    {dest.costIndex && (
+                      <span className="mt-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/15 backdrop-blur-sm text-white text-[10px] font-medium">
+                        <TrendingUp className="w-3 h-3" />
+                        {dest.costIndex}
                       </span>
-                    </div>
-                  </div>
-                  <div className="p-4">
-                    <h3 className="font-semibold text-[#1a1a1a] mb-1">{trip.name}</h3>
-                    <div className="flex items-center gap-1 text-gray-500 text-sm mb-2">
-                      <MapPin className="w-3.5 h-3.5" />
-                      {trip.destination}
-                    </div>
-                    <div className="flex items-center gap-1 text-gray-500 text-sm">
-                      <Calendar className="w-3.5 h-3.5" />
-                      {trip.startDate} - {trip.endDate}
-                    </div>
-                    <div className="mt-3 flex items-center justify-between">
-                      <span className="text-xs text-gray-400">{trip.sections.length} sections</span>
-                      <span className="text-xs font-medium text-[#5b7f74]">${trip.budget.toLocaleString()} budget</span>
-                    </div>
+                    )}
                   </div>
                 </button>
               ))}
             </div>
-          )}
+          </div>
         </div>
 
-        {/* Plan a Trip CTA */}
-        <div className="bg-[#00202a] rounded-2xl p-8 lg:p-12 text-center relative overflow-hidden">
-          <div className="absolute inset-0 opacity-10">
-            <img src="/images/dest-maldives.jpg" alt="" className="w-full h-full object-cover" />
-          </div>
-          <div className="relative z-10">
-            <h2 className="text-2xl lg:text-3xl font-bold text-white mb-3">
-              Ready for your next adventure?
-            </h2>
-            <p className="text-white/60 mb-6 max-w-lg mx-auto">
-              Plan, organize, and share your perfect trip with Traveloop&apos;s powerful itinerary builder.
+        {/* ── Right Column (1/3) ── */}
+        <div className="space-y-6">
+          {/* Traveler Status Card */}
+          <div className="rounded-2xl bg-gradient-to-br from-[#001b26] to-[#0d313f] p-5 text-white">
+            <p className="text-[10px] font-semibold tracking-widest text-white/50 uppercase mb-3">Traveler Status</p>
+            <p className="text-4xl font-bold font-['Montserrat']">
+              {trips.length > 0 ? trips.length * 2 : 12}
+              <span className="text-base font-normal text-white/60 ml-2">Countries Visited</span>
             </p>
-            <button onClick={() => navigate('/trips/new')} className="btn-primary text-base px-8 py-3">
-              <MapPin className="w-5 h-5" />
-              Plan a New Trip
+            <div className="mt-4 h-1.5 bg-white/10 rounded-full overflow-hidden">
+              <div className="h-full bg-[#E8604C] rounded-full" style={{ width: '70%' }} />
+            </div>
+            <p className="text-xs text-white/40 mt-2">3 more countries to reach Gold Explorer</p>
+          </div>
+
+          {/* Community Highlights */}
+          <div className="card p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <Users className="w-5 h-5 text-[#E8604C]" />
+              <h3 className="text-lg font-bold text-[#0b1c30] font-['Montserrat']">Community Highlights</h3>
+            </div>
+
+            <div className="space-y-4">
+              {[
+                { title: '7 Days in Reykjavik: A Winter Guide', author: 'Mark T.', saves: '2k', tags: ['Nature', 'Winter'] },
+                { title: 'Hidden Gems of the Amalfi Coast', author: 'Sarah W.', saves: '1.5k', tags: ['Coastal', 'Food'] },
+              ].map((post, i) => (
+                <div key={i} className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-full bg-[#f1f5f9] flex items-center justify-center text-[#64748B] font-bold text-xs flex-shrink-0">
+                    {post.author[0]}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[#0b1c30] leading-tight">{post.title}</p>
+                    <p className="text-xs text-[#94a3b8] mt-0.5">by {post.author} • {post.saves} saves</p>
+                    <div className="flex gap-1.5 mt-1.5">
+                      {post.tags.map((tag) => (
+                        <span key={tag} className="badge badge-primary text-[10px]">{tag}</span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={() => navigate('/community')}
+              className="w-full mt-4 py-2.5 rounded-xl border border-[#e2e8f0] text-sm font-medium text-[#64748B] hover:bg-[#f1f5f9] hover:text-[#0b1c30] transition-all"
+            >
+              Explore Community
             </button>
           </div>
         </div>

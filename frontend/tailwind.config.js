@@ -4,6 +4,21 @@ module.exports = {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        heading: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+      },
+      fontSize: {
+        'hero':   ['clamp(2rem,5vw,3rem)',   { lineHeight: '1.15', letterSpacing: '-0.03em' }],
+        'h1':     ['clamp(1.75rem,4vw,2.5rem)', { lineHeight: '1.2',  letterSpacing: '-0.025em' }],
+        'h2':     ['clamp(1.375rem,3vw,2rem)',  { lineHeight: '1.25', letterSpacing: '-0.02em' }],
+        'h3':     ['clamp(1.125rem,2.5vw,1.5rem)', { lineHeight: '1.3', letterSpacing: '-0.015em' }],
+        'h4':     ['clamp(1rem,2vw,1.25rem)', { lineHeight: '1.4', letterSpacing: '-0.01em' }],
+        'body-lg':['1.125rem',  { lineHeight: '1.75' }],
+        'body':   ['1rem',      { lineHeight: '1.625' }],
+        'sm':     ['0.875rem',  { lineHeight: '1.571' }],
+        'xs':     ['0.75rem',   { lineHeight: '1.5' }],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

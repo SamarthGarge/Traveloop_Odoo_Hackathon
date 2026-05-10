@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { destinations } from '../data/destinations';
+import Select from 'react-select';
+import { Country, City } from 'country-state-city';
 import {
   ArrowLeft,
   MapPin,
@@ -10,6 +12,48 @@ import {
   Plus,
   Sparkles,
 } from 'lucide-react';
+
+const customSelectStyles = {
+  control: (provided: any, state: any) => ({
+    ...provided,
+    minHeight: '46px',
+    borderRadius: '0.75rem',
+    borderWidth: '1px',
+    borderColor: state.isFocused ? 'transparent' : '#e2e8f0',
+    boxShadow: state.isFocused ? '0 0 0 3px rgba(0, 27, 38, 0.08)' : '0 1px 2px 0 rgba(0, 0, 0, 0.04)',
+    '&:hover': {
+      borderColor: state.isFocused ? 'transparent' : '#94a3b8',
+    },
+    backgroundColor: '#ffffff',
+    transition: 'all 0.2s',
+  }),
+  option: (provided: any, state: any) => ({
+    ...provided,
+    backgroundColor: state.isSelected ? '#001b26' : state.isFocused ? '#f1f5f9' : 'white',
+    color: state.isSelected ? '#ffffff' : '#0b1c30',
+    cursor: 'pointer',
+    '&:active': {
+      backgroundColor: '#001b26',
+      color: '#ffffff',
+    },
+  }),
+  menu: (provided: any) => ({
+    ...provided,
+    borderRadius: '0.75rem',
+    overflow: 'hidden',
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.06)',
+    border: '1px solid #e2e8f0',
+    zIndex: 50,
+  }),
+  singleValue: (provided: any) => ({
+    ...provided,
+    color: '#0b1c30',
+  }),
+  placeholder: (provided: any) => ({
+    ...provided,
+    color: '#94a3b8',
+  }),
+};
 
 export default function CreateTrip() {
   const navigate = useNavigate();
@@ -21,9 +65,28 @@ export default function CreateTrip() {
     endDate: '',
     description: '',
   });
+  
+  const [selectedCountry, setSelectedCountry] = useState<{ value: string; label: string } | null>(null);
+  const [selectedCity, setSelectedCity] = useState<{ value: string; label: string } | null>(null);
   const [selectedPlace, setSelectedPlace] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [step, setStep] = useState(1);
+
+  const countryOptions = useMemo(() => 
+    Country.getAllCountries().map((c) => ({
+      value: c.isoCode,
+      label: c.name,
+    })), 
+  []);
+
+  const cityOptions = useMemo(() => 
+    selectedCountry
+      ? City.getCitiesOfCountry(selectedCountry.value)?.map((c) => ({
+          value: c.name,
+          label: c.name,
+        })) || []
+      : [],
+  [selectedCountry]);
 
   const handleChange = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -31,7 +94,7 @@ export default function CreateTrip() {
 
   const handleSubmit = () => {
     if (!form.name || !form.destination || !form.startDate || !form.endDate) return;
-    const dest = destinations.find((d) => d.name === form.destination);
+    const dest = destinations.find((d) => form.destination.includes(d.name));
     createTrip({
       name: form.name,
       destination: form.destination,
@@ -51,30 +114,32 @@ export default function CreateTrip() {
     !selectedPlace || d.name !== selectedPlace
   );
 
+  const today = new Date().toISOString().split('T')[0];
+
   return (
-    <div className="min-h-screen bg-[#f4f4f0]">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
+    <div className="page-transition max-w-3xl">
+      <div>
         {/* Header */}
         <button
           onClick={() => navigate('/dashboard')}
-          className="flex items-center gap-2 text-gray-500 hover:text-[#1a1a1a] mb-6 transition-colors"
+          className="flex items-center gap-2 text-[#94a3b8] hover:text-[#0b1c30] mb-6 transition-colors text-sm"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Dashboard
         </button>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="card overflow-hidden">
           {/* Progress Steps */}
-          <div className="flex border-b border-gray-100">
+          <div className="flex border-b border-[#f1f5f9]">
             {['Trip Details', 'Dates & Place', 'Suggestions'].map((label, i) => (
               <div
                 key={label}
                 className={`flex-1 py-4 text-center text-sm font-medium transition-colors ${
-                  step >= i + 1 ? 'text-[#5b7f74] border-b-2 border-[#5b7f74]' : 'text-gray-400'
+                  step >= i + 1 ? 'text-[#E8604C] border-b-2 border-[#E8604C]' : 'text-[#94a3b8]'
                 }`}
               >
                 <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs mr-2 ${
-                  step >= i + 1 ? 'bg-[#5b7f74] text-white' : 'bg-gray-100 text-gray-400'
+                  step >= i + 1 ? 'bg-[#E8604C] text-white' : 'bg-[#f1f5f9] text-[#94a3b8]'
                 }`}>
                   {i + 1}
                 </span>
@@ -87,19 +152,19 @@ export default function CreateTrip() {
             {step === 1 && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-xl font-bold text-[#1a1a1a] mb-1">Name your trip</h2>
-                  <p className="text-gray-500 text-sm">Give your adventure a memorable name</p>
+                  <h2 className="text-xl font-bold text-[#0b1c30] font-['Montserrat'] mb-1">Name your trip</h2>
+                  <p className="text-[#64748B] text-sm">Give your adventure a memorable name</p>
                 </div>
 
                 {/* Cover Photo Upload */}
-                <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center hover:border-[#ffcc66] transition-colors cursor-pointer">
+                <div className="border-2 border-dashed border-[#e2e8f0] rounded-2xl p-8 text-center hover:border-[#E8604C]/40 transition-colors cursor-pointer">
                   <Camera className="w-10 h-10 text-gray-300 mx-auto mb-2" />
                   <p className="text-sm text-gray-500">Upload a cover photo</p>
                   <p className="text-xs text-gray-400 mt-1">Optional</p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Trip Name *</label>
+                  <label className="block text-xs font-medium text-[#64748B] mb-1.5">Trip Name *</label>
                   <input
                     type="text"
                     value={form.name}
@@ -110,7 +175,7 @@ export default function CreateTrip() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
+                  <label className="block text-xs font-medium text-[#64748B] mb-1.5">Description</label>
                   <textarea
                     rows={3}
                     value={form.description}
@@ -136,33 +201,53 @@ export default function CreateTrip() {
             {step === 2 && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-xl font-bold text-[#1a1a1a] mb-1">When and where?</h2>
-                  <p className="text-gray-500 text-sm">Set your travel dates and destination</p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    <MapPin className="w-4 h-4 inline mr-1" />
-                    Select a Place *
-                  </label>
-                  <select
-                    value={form.destination}
-                    onChange={(e) => {
-                      handleChange('destination', e.target.value);
-                      setSelectedPlace(e.target.value);
-                    }}
-                    className="input-field"
-                  >
-                    <option value="">Choose a destination...</option>
-                    {destinations.map((d) => (
-                      <option key={d.id} value={d.name}>
-                        {d.name}, {d.country}
-                      </option>
-                    ))}
-                  </select>
+                  <h2 className="text-xl font-bold text-[#0b1c30] font-['Montserrat'] mb-1">When and where?</h2>
+                  <p className="text-[#64748B] text-sm">Set your travel dates and destination</p>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      <MapPin className="w-4 h-4 inline mr-1" />
+                      Country *
+                    </label>
+                    <Select
+                      options={countryOptions}
+                      value={selectedCountry}
+                      onChange={(option) => {
+                        setSelectedCountry(option);
+                        setSelectedCity(null);
+                        handleChange('destination', '');
+                        setSelectedPlace('');
+                      }}
+                      styles={customSelectStyles}
+                      placeholder="Search country..."
+                      className="text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      <MapPin className="w-4 h-4 inline mr-1 text-transparent" />
+                      City *
+                    </label>
+                    <Select
+                      options={cityOptions}
+                      value={selectedCity}
+                      onChange={(option) => {
+                        setSelectedCity(option);
+                        const dest = option ? `${option.label}, ${selectedCountry?.label}` : '';
+                        handleChange('destination', dest);
+                        setSelectedPlace(option?.label || '');
+                      }}
+                      isDisabled={!selectedCountry}
+                      styles={customSelectStyles}
+                      placeholder={selectedCountry ? "Search city..." : "Select country first"}
+                      className="text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">
                       <Calendar className="w-4 h-4 inline mr-1" />
@@ -171,6 +256,7 @@ export default function CreateTrip() {
                     <input
                       type="date"
                       value={form.startDate}
+                      min={today}
                       onChange={(e) => handleChange('startDate', e.target.value)}
                       className="input-field"
                     />
@@ -183,14 +269,15 @@ export default function CreateTrip() {
                     <input
                       type="date"
                       value={form.endDate}
+                      min={form.startDate || today}
                       onChange={(e) => handleChange('endDate', e.target.value)}
                       className="input-field"
                     />
                   </div>
                 </div>
 
-                <div className="flex justify-between">
-                  <button onClick={() => setStep(1)} className="btn-secondary !text-gray-600 !border-gray-200">
+                <div className="flex justify-between mt-8">
+                  <button onClick={() => setStep(1)} className="btn-secondary">
                     <ArrowLeft className="w-4 h-4" />
                     Back
                   </button>
@@ -209,18 +296,18 @@ export default function CreateTrip() {
             {step === 3 && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-xl font-bold text-[#1a1a1a] mb-1">Suggested Activities</h2>
-                  <p className="text-gray-500 text-sm">
-                    Popular activities in {form.destination || 'your destination'}
+                  <h2 className="text-xl font-bold text-[#0b1c30] font-['Montserrat'] mb-1">Suggested Activities</h2>
+                  <p className="text-[#64748B] text-sm">
+                    Popular activities in {selectedPlace || form.destination || 'your destination'}
                   </p>
                 </div>
 
                 {showSuggestions && selectedPlace && (
-                  <div className="bg-[#ffcc66]/10 rounded-xl p-4 border border-[#ffcc66]/20">
+                  <div className="bg-[#E8604C]/5 rounded-xl p-4 border border-[#E8604C]/15">
                     <div className="flex items-start gap-3">
-                      <Sparkles className="w-5 h-5 text-[#ffcc66] mt-0.5" />
+                      <Sparkles className="w-5 h-5 text-[#E8604C] mt-0.5" />
                       <div>
-                        <p className="text-sm font-medium text-[#1a1a1a]">
+                        <p className="text-sm font-medium text-[#0b1c30]">
                           AI-powered suggestions for {selectedPlace}
                         </p>
                         <p className="text-xs text-gray-500 mt-1">
@@ -235,7 +322,7 @@ export default function CreateTrip() {
                   {suggestions.slice(0, 5).map((dest) => (
                     <div
                       key={dest.id}
-                      className="flex items-center gap-4 p-3 rounded-xl border border-gray-100 hover:border-[#ffcc66]/50 hover:bg-[#ffcc66]/5 transition-all cursor-pointer"
+                      className="flex items-center gap-4 p-3 rounded-xl border border-[#e2e8f0] hover:border-[#E8604C]/30 hover:bg-[#E8604C]/5 transition-all cursor-pointer"
                     >
                       <img
                         src={dest.image}
@@ -246,7 +333,7 @@ export default function CreateTrip() {
                         <h4 className="font-medium text-[#1a1a1a]">{dest.name}</h4>
                         <p className="text-sm text-gray-500">{dest.activities.slice(0, 3).join(', ')}</p>
                       </div>
-                      <button className="p-2 rounded-full bg-[#5b7f74]/10 text-[#5b7f74] hover:bg-[#5b7f74]/20">
+                      <button className="p-2 rounded-full bg-[#E8604C]/10 text-[#E8604C] hover:bg-[#E8604C]/20">
                         <Plus className="w-4 h-4" />
                       </button>
                     </div>
@@ -254,7 +341,7 @@ export default function CreateTrip() {
                 </div>
 
                 <div className="flex justify-between pt-4 border-t border-gray-100">
-                  <button onClick={() => setStep(2)} className="btn-secondary !text-gray-600 !border-gray-200">
+                  <button onClick={() => setStep(2)} className="btn-secondary">
                     <ArrowLeft className="w-4 h-4" />
                     Back
                   </button>

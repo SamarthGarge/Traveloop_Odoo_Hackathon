@@ -2,20 +2,31 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { destinations, activities } from '../data/destinations';
 import {
-  ArrowLeft,
   Search,
   MapPin,
   Clock,
   DollarSign,
   Plus,
   Star,
+  Bookmark,
+  Mountain,
+  UtensilsCrossed,
+  Sparkles,
+  Landmark,
 } from 'lucide-react';
+
+const categoryIcons: Record<string, React.ElementType> = {
+  Outdoors: Mountain,
+  Culture: Landmark,
+  Food: UtensilsCrossed,
+  Nightlife: Sparkles,
+};
 
 export default function ActivitySearch() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCity, setSelectedCity] = useState('');
-  const [activityType, setActivityType] = useState('');
+  const [activeCategory, setActiveCategory] = useState('');
   const [viewMode, setViewMode] = useState<'cities' | 'activities'>('cities');
 
   const filteredCities = useMemo(() => {
@@ -23,10 +34,10 @@ export default function ActivitySearch() {
       const matchSearch = !searchQuery ||
         d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         d.country.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchType = !activityType || d.activities.includes(activityType);
+      const matchType = !activeCategory || d.activities.includes(activeCategory);
       return matchSearch && matchType;
     });
-  }, [searchQuery, activityType]);
+  }, [searchQuery, activeCategory]);
 
   const filteredActivities = useMemo(() => {
     return activities.filter((a) => {
@@ -34,169 +45,153 @@ export default function ActivitySearch() {
         a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         a.destination.toLowerCase().includes(searchQuery.toLowerCase());
       const matchCity = !selectedCity || a.destination === selectedCity;
-      const matchType = !activityType || a.type === activityType;
-      return matchSearch && matchCity && matchType;
+      return matchSearch && matchCity;
     });
-  }, [searchQuery, selectedCity, activityType]);
+  }, [searchQuery, selectedCity]);
 
-  const activityTypes = [...new Set(activities.map((a) => a.type))];
+  const categories = ['Outdoors', 'Culture', 'Food', 'Nightlife'];
 
   return (
-    <div className="min-h-screen bg-[#f4f4f0]">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
-        <button
-          onClick={() => navigate('/dashboard')}
-          className="flex items-center gap-2 text-gray-500 hover:text-[#1a1a1a] mb-6"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </button>
-
-        <h1 className="text-2xl font-bold text-[#1a1a1a] mb-6">
-          {viewMode === 'cities' ? 'Explore Destinations' : 'Activities & Experiences'}
+    <div className="page-transition">
+      {/* Hero */}
+      <div className="text-center mb-8">
+        <h1 className="text-3xl lg:text-4xl font-bold text-[#0b1c30] font-['Montserrat'] mb-2">
+          Where do you want to go?
         </h1>
+        <p className="text-[#64748B] max-w-lg mx-auto">
+          Discover curated itineraries, hidden gems, and expert local recommendations for your next adventure.
+        </p>
+      </div>
 
-        {/* Search & Filters */}
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-6">
-          <div className="flex flex-col sm:flex-row gap-3 mb-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={viewMode === 'cities' ? "Search cities, countries..." : "Search activities..."}
-                className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#ffcc66]"
-              />
-            </div>
-            <div className="flex gap-2">
-              <select
-                value={activityType}
-                onChange={(e) => setActivityType(e.target.value)}
-                className="px-4 py-3 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#ffcc66]"
-              >
-                <option value="">All Types</option>
-                {activityTypes.map((t) => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-            </div>
+      {/* Search Bar */}
+      <div className="max-w-2xl mx-auto mb-6">
+        <div className="card flex items-center p-1.5">
+          <div className="flex-1 relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#94a3b8]" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search cities, countries, or activities..."
+              className="w-full pl-12 pr-4 py-3 rounded-xl bg-transparent focus:outline-none text-sm text-[#0b1c30] placeholder:text-[#94a3b8]"
+            />
           </div>
+          <button className="btn-primary py-3 px-6 text-sm rounded-xl">Explore</button>
+        </div>
+      </div>
 
-          {/* Toggle */}
-          <div className="flex gap-1 bg-gray-50 rounded-lg p-1">
+      {/* Category Pills */}
+      <div className="flex items-center justify-center gap-2 mb-8 flex-wrap">
+        {categories.map((cat) => {
+          const Icon = categoryIcons[cat] || Star;
+          return (
             <button
-              onClick={() => setViewMode('cities')}
-              className={`flex-1 py-2 rounded-md text-sm font-medium transition-all ${
-                viewMode === 'cities' ? 'bg-white text-[#00202a] shadow-sm' : 'text-gray-500'
+              key={cat}
+              onClick={() => setActiveCategory(activeCategory === cat ? '' : cat)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                activeCategory === cat
+                  ? 'bg-[#001b26] text-white'
+                  : 'bg-white text-[#64748B] border border-[#e2e8f0] hover:bg-[#f1f5f9] hover:text-[#0b1c30]'
               }`}
             >
-              <MapPin className="w-4 h-4 inline mr-1.5" />
-              Cities
+              <Icon className="w-4 h-4" />
+              {cat}
             </button>
-            <button
-              onClick={() => setViewMode('activities')}
-              className={`flex-1 py-2 rounded-md text-sm font-medium transition-all ${
-                viewMode === 'activities' ? 'bg-white text-[#00202a] shadow-sm' : 'text-gray-500'
-              }`}
-            >
-              <Star className="w-4 h-4 inline mr-1.5" />
-              Activities
-            </button>
+          );
+        })}
+        <button className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all bg-white text-[#E8604C] border border-[#E8604C]/20 hover:bg-[#E8604C]/5`}>
+          <Bookmark className="w-4 h-4" />
+          Saved
+        </button>
+      </div>
+
+      {/* Trending Destinations */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-xl font-bold text-[#0b1c30] font-['Montserrat']">Trending Destinations</h2>
+            <p className="text-sm text-[#94a3b8] mt-0.5">Highly rated by the Traveloop community right now.</p>
           </div>
+          <button className="text-sm text-[#64748B] hover:text-[#0b1c30] font-medium flex items-center gap-1 transition-colors">
+            View all <span className="text-lg">→</span>
+          </button>
         </div>
 
-        {viewMode === 'cities' ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredCities.map((dest) => (
-              <div
-                key={dest.id}
-                className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 card-hover"
-              >
-                <div className="relative h-44">
-                  <img src={dest.image} alt={dest.name} className="w-full h-full object-cover" />
-                  <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-full px-2.5 py-1 text-xs font-medium text-[#00202a]">
-                    {dest.costIndex}
-                  </div>
-                </div>
-                <div className="p-4">
-                  <h3 className="font-semibold text-[#1a1a1a]">{dest.name}</h3>
-                  <div className="flex items-center gap-1 text-gray-500 text-sm mb-2">
-                    <MapPin className="w-3.5 h-3.5" />
-                    {dest.country}
-                  </div>
-                  <p className="text-sm text-gray-600 mb-3">{dest.description}</p>
-                  <div className="flex flex-wrap gap-1.5 mb-3">
-                    {dest.activities.slice(0, 3).map((a) => (
-                      <span key={a} className="px-2 py-0.5 rounded-full bg-[#5b7f74]/10 text-[#5b7f74] text-xs">
-                        {a}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-400">Popularity: {dest.popularity}%</span>
-                    <button
-                      onClick={() => { setSelectedCity(dest.name); setViewMode('activities'); }}
-                      className="text-sm text-[#5b7f74] font-medium hover:text-[#00202a] flex items-center gap-1"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Add to Trip
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {selectedCity && (
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-sm text-gray-500">Showing activities in:</span>
-                <span className="px-3 py-1 rounded-full bg-[#ffcc66]/20 text-[#00202a] text-sm font-medium">
-                  {selectedCity}
-                </span>
-                <button onClick={() => setSelectedCity('')} className="text-sm text-gray-400 hover:text-gray-600">
-                  Clear
-                </button>
-              </div>
-            )}
-            {filteredActivities.map((activity) => (
-              <div
-                key={activity.id}
-                className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex flex-col sm:flex-row gap-4"
-              >
-                <img
-                  src={activity.image}
-                  alt={activity.name}
-                  className="w-full sm:w-32 h-24 rounded-lg object-cover flex-shrink-0"
-                />
-                <div className="flex-1">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="font-semibold text-[#1a1a1a]">{activity.name}</h3>
-                      <p className="text-sm text-gray-500">{activity.destination} | {activity.type}</p>
-                    </div>
-                    <button className="p-2 rounded-lg bg-[#5b7f74]/10 text-[#5b7f74] hover:bg-[#5b7f74]/20 transition-colors">
-                      <Plus className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <p className="text-sm text-gray-600 mt-1">{activity.description}</p>
-                  <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
-                    <span className="flex items-center gap-1">
-                      <DollarSign className="w-3.5 h-3.5" />
-                      {activity.cost}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5" />
-                      {activity.duration}
+        {/* Bento Grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-[220px] lg:auto-rows-[260px]">
+          {filteredCities.slice(0, 5).map((dest, i) => (
+            <button
+              key={dest.id}
+              onClick={() => { setSelectedCity(dest.name); setViewMode('activities'); }}
+              className={`group relative rounded-2xl overflow-hidden text-left ${
+                i === 0 ? 'row-span-2 col-span-1 lg:col-span-2' : ''
+              }`}
+            >
+              <img
+                src={dest.image}
+                alt={dest.name}
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+              
+              {/* Bookmark */}
+              <button className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center text-[#64748B] hover:text-[#E8604C] transition-colors z-10">
+                <Bookmark className="w-4 h-4" />
+              </button>
+
+              {/* Content */}
+              <div className="absolute bottom-0 left-0 right-0 p-4 lg:p-5">
+                {i === 0 && (
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="badge bg-[#E8604C] text-white text-[10px]">CULTURE</span>
+                    <span className="badge bg-white/20 text-white text-[10px] backdrop-blur-sm flex items-center gap-1">
+                      <Star className="w-3 h-3 fill-current" /> {dest.popularity ? (dest.popularity / 20).toFixed(1) : '4.9'}
                     </span>
                   </div>
-                </div>
+                )}
+                <h3 className={`text-white font-bold font-['Montserrat'] ${i === 0 ? 'text-2xl lg:text-3xl' : 'text-base'}`}>
+                  {dest.name}, {dest.country}
+                </h3>
+                {i === 0 && (
+                  <p className="text-white/60 text-sm mt-1 line-clamp-2">{dest.description}</p>
+                )}
               </div>
-            ))}
-          </div>
-        )}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {/* Activity List when city selected */}
+      {selectedCity && viewMode === 'activities' && (
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-4">
+            <h2 className="text-xl font-bold text-[#0b1c30] font-['Montserrat']">Activities in {selectedCity}</h2>
+            <button onClick={() => { setSelectedCity(''); setViewMode('cities'); }} className="text-sm text-[#94a3b8] hover:text-[#64748B]">Clear</button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {filteredActivities.map((activity) => (
+              <div key={activity.id} className="card p-4 flex gap-4 card-interactive">
+                <img src={activity.image} alt={activity.name} className="w-24 h-20 rounded-xl object-cover flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <h3 className="font-semibold text-[#0b1c30] text-sm">{activity.name}</h3>
+                      <p className="text-xs text-[#94a3b8] mt-0.5">{activity.destination} · {activity.type}</p>
+                    </div>
+                    <button className="p-2 rounded-xl bg-[#E8604C]/8 text-[#E8604C] hover:bg-[#E8604C]/15 transition-colors flex-shrink-0">
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-4 mt-2 text-xs text-[#94a3b8]">
+                    <span className="flex items-center gap-1"><DollarSign className="w-3 h-3" />{activity.cost}</span>
+                    <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{activity.duration}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

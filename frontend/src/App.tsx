@@ -4,6 +4,7 @@ import { useStore } from './store/useStore';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
 import Dashboard from './pages/Dashboard';
 import CreateTrip from './pages/CreateTrip';
 import BuildItinerary from './pages/BuildItinerary';
@@ -16,6 +17,8 @@ import PackingChecklist from './pages/PackingChecklist';
 import AdminPanel from './pages/AdminPanel';
 import TripNotes from './pages/TripNotes';
 import ExpenseInvoice from './pages/ExpenseInvoice';
+import CitySearch from './pages/CitySearch';
+import SharedItinerary from './pages/SharedItinerary';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const isLoggedIn = useStore((s) => s.isLoggedIn);
@@ -58,6 +61,8 @@ export default function App() {
         {/* Auth Routes */}
         <Route path="/login" element={<AnimatedPage><Login /></AnimatedPage>} />
         <Route path="/register" element={<AnimatedPage><Register /></AnimatedPage>} />
+        <Route path="/forgot-password" element={<AnimatedPage><ForgotPassword /></AnimatedPage>} />
+        <Route path="/shared/:id?" element={<AnimatedPage><SharedItinerary /></AnimatedPage>} />
 
         {/* Main App Routes */}
         <Route element={<Layout />}>
@@ -68,6 +73,7 @@ export default function App() {
           <Route path="/itinerary/build" element={<PrivateRoute><AnimatedPage><BuildItinerary /></AnimatedPage></PrivateRoute>} />
           <Route path="/itinerary/view" element={<PrivateRoute><AnimatedPage><ItineraryView /></AnimatedPage></PrivateRoute>} />
           <Route path="/profile" element={<PrivateRoute><AnimatedPage><UserProfile /></AnimatedPage></PrivateRoute>} />
+          <Route path="/search-cities" element={<PrivateRoute><AnimatedPage><CitySearch /></AnimatedPage></PrivateRoute>} />
           <Route path="/search" element={<PrivateRoute><AnimatedPage><ActivitySearch /></AnimatedPage></PrivateRoute>} />
           <Route path="/community" element={<PrivateRoute><AnimatedPage><Community /></AnimatedPage></PrivateRoute>} />
           <Route path="/packing" element={<PrivateRoute><AnimatedPage><PackingChecklist /></AnimatedPage></PrivateRoute>} />

@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import {
-  ArrowLeft,
   Check,
   Plus,
   RotateCcw,
@@ -10,7 +9,21 @@ import {
   Search,
   ChevronDown,
   ChevronUp,
+  FileText,
+  Shirt,
+  Smartphone,
+  Droplets,
+  AlertTriangle,
+  ToggleLeft,
+  ToggleRight,
 } from 'lucide-react';
+
+const categoryIcons: Record<string, React.ElementType> = {
+  Documents: FileText,
+  Clothing: Shirt,
+  Electronics: Smartphone,
+  Toiletries: Droplets,
+};
 
 export default function PackingChecklist() {
   const navigate = useNavigate();
@@ -19,10 +32,12 @@ export default function PackingChecklist() {
   const [newItem, setNewItem] = useState('');
   const [newCategory, setNewCategory] = useState('Documents');
   const [showAdd, setShowAdd] = useState(false);
+  const [sharedMode, setSharedMode] = useState(true);
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({
     Documents: true,
     Clothing: true,
     Electronics: true,
+    Toiletries: true,
   });
 
   const categories = [...new Set(checklist.map((item) => item.category))];
@@ -40,102 +55,52 @@ export default function PackingChecklist() {
 
   const packedCount = checklist.filter((i) => i.packed).length;
   const totalCount = checklist.length;
+  const progress = totalCount ? Math.round((packedCount / totalCount) * 100) : 0;
 
   return (
-    <div className="min-h-screen bg-[#f4f4f0]">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
-        <button
-          onClick={() => navigate('/dashboard')}
-          className="flex items-center gap-2 text-gray-500 hover:text-[#1a1a1a] mb-6"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </button>
-
-        {/* Header */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <h1 className="text-2xl font-bold text-[#1a1a1a]">Packing Checklist</h1>
-            <span className="text-2xl font-bold text-[#5b7f74]">
-              {packedCount}/{totalCount}
-            </span>
+    <div className="page-transition max-w-4xl">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="badge badge-primary text-[10px]">TOKYO 2024</span>
+            <span className="badge bg-[#f1f5f9] text-[#64748B] text-[10px]">7 DAYS</span>
           </div>
-          <p className="text-gray-500 text-sm mb-4">
-            Trip: {activeTrip?.name || 'Paris & Rome Adventure'}
-          </p>
-          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-[#5b7f74] rounded-full transition-all duration-500"
-              style={{ width: `${totalCount ? (packedCount / totalCount) * 100 : 0}%` }}
-            />
-          </div>
-          <p className="text-xs text-gray-400 mt-2">
-            {totalCount ? Math.round((packedCount / totalCount) * 100) : 0}% packed
-          </p>
+          <h1 className="text-2xl lg:text-3xl font-bold text-[#0b1c30] font-['Montserrat']">Packing Checklist</h1>
         </div>
-
-        {/* Search & Actions */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-6">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search items..."
-              className="w-full pl-9 pr-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#ffcc66] text-sm"
-            />
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 text-sm text-[#64748B]">
+            <span className="font-medium">Shared Checklist</span>
+            <button onClick={() => setSharedMode(!sharedMode)} className="text-[#E8604C]">
+              {sharedMode ? <ToggleRight className="w-8 h-5" /> : <ToggleLeft className="w-8 h-5" />}
+            </button>
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowAdd(!showAdd)}
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-[#5b7f74] text-white text-sm font-medium hover:bg-[#4a6b61] transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Add Item
-            </button>
-            <button
-              onClick={resetChecklist}
-              className="flex items-center gap-1.5 px-3 py-2.5 rounded-lg border border-gray-200 text-gray-600 text-sm hover:bg-gray-50"
-            >
-              <RotateCcw className="w-4 h-4" />
-              Reset
-            </button>
-            <button className="flex items-center gap-1.5 px-3 py-2.5 rounded-lg border border-gray-200 text-gray-600 text-sm hover:bg-gray-50">
-              <Share2 className="w-4 h-4" />
-              Share
-            </button>
+          <div className="flex -space-x-2">
+            <div className="w-8 h-8 rounded-full bg-[#E8604C] border-2 border-white flex items-center justify-center text-white text-xs font-bold">JS</div>
+            <div className="w-8 h-8 rounded-full bg-[#001b26] border-2 border-white flex items-center justify-center text-white text-xs font-bold">AL</div>
           </div>
         </div>
+      </div>
 
-        {/* Add Item Form */}
-        {showAdd && (
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-4">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <input
-                type="text"
-                value={newItem}
-                onChange={(e) => setNewItem(e.target.value)}
-                placeholder="Item name..."
-                className="flex-1 px-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#ffcc66] text-sm"
-              />
-              <select
-                value={newCategory}
-                onChange={(e) => setNewCategory(e.target.value)}
-                className="px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#ffcc66]"
-              >
-                {categories.map((cat) => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-              <button onClick={handleAddItem} className="btn-primary text-sm py-2.5">
-                Add
-              </button>
-            </div>
+      <div className="border-b border-[#e2e8f0] mb-8" />
+
+      {/* Trip Readiness */}
+      <div className="card p-6 mb-6">
+        <div className="flex items-start justify-between mb-3">
+          <div>
+            <h2 className="text-xl font-bold text-[#0b1c30] font-['Montserrat']">Trip Readiness</h2>
+            <p className="text-sm text-[#64748B] mt-0.5">You're making good progress. {packedCount} of {totalCount} items packed.</p>
           </div>
-        )}
+          <span className="text-4xl font-bold text-[#E8604C] font-['Montserrat']">{progress}%</span>
+        </div>
+        <div className="h-2.5 bg-[#f1f5f9] rounded-full overflow-hidden">
+          <div className="h-full bg-[#E8604C] rounded-full transition-all duration-700 ease-out" style={{ width: `${progress}%` }} />
+        </div>
+      </div>
 
-        {/* Categories */}
+      {/* Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left: Categories */}
         <div className="space-y-4">
           {categories.map((category) => {
             const items = checklist.filter(
@@ -147,49 +112,117 @@ export default function PackingChecklist() {
 
             const catPacked = items.filter((i) => i.packed).length;
             const isExpanded = expandedCategories[category] !== false;
+            const CatIcon = categoryIcons[category] || FileText;
 
             return (
-              <div key={category} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              <div key={category} className="card overflow-hidden">
                 <button
                   onClick={() => toggleCategory(category)}
-                  className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+                  className="w-full flex items-center justify-between p-4 hover:bg-[#f8fafc] transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <h3 className="font-semibold text-[#1a1a1a]">{category}</h3>
-                    <span className="text-sm text-gray-400">
-                      {catPacked}/{items.length}
-                    </span>
+                    <div className="w-8 h-8 rounded-lg bg-[#f1f5f9] flex items-center justify-center text-[#64748B]">
+                      <CatIcon className="w-4 h-4" />
+                    </div>
+                    <h3 className="font-bold text-[#0b1c30] font-['Montserrat'] text-base">{category}</h3>
                   </div>
-                  {isExpanded ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+                  <div className="flex items-center gap-3">
+                    <span className="badge bg-[#f1f5f9] text-[#64748B]">{catPacked}/{items.length} Packed</span>
+                    {isExpanded ? <ChevronUp className="w-5 h-5 text-[#94a3b8]" /> : <ChevronDown className="w-5 h-5 text-[#94a3b8]" />}
+                  </div>
                 </button>
 
                 {isExpanded && (
-                  <div className="border-t border-gray-50">
+                  <div className="border-t border-[#f1f5f9]">
                     {items.map((item) => (
                       <div
                         key={item.id}
-                        className="flex items-center gap-3 p-3 hover:bg-gray-50 transition-colors"
+                        className="flex items-center gap-3 px-4 py-3 hover:bg-[#f8fafc] transition-colors"
                       >
                         <button
                           onClick={() => toggleChecklistItem(item.id)}
-                          className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                          className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all flex-shrink-0 ${
                             item.packed
-                              ? 'bg-[#5b7f74] border-[#5b7f74]'
-                              : 'border-gray-300 hover:border-[#5b7f74]'
+                              ? 'bg-[#E8604C] border-[#E8604C]'
+                              : 'border-[#e2e8f0] hover:border-[#E8604C]'
                           }`}
                         >
                           {item.packed && <Check className="w-3 h-3 text-white" />}
                         </button>
-                        <span className={`flex-1 text-sm ${item.packed ? 'line-through text-gray-400' : 'text-[#1a1a1a]'}`}>
+                        <span className={`flex-1 text-sm ${item.packed ? 'line-through text-[#94a3b8]' : 'text-[#0b1c30]'}`}>
                           {item.name}
                         </span>
+                        {item.name.includes('Insurance') && (
+                          <span className="badge badge-error text-[10px]">
+                            <AlertTriangle className="w-3 h-3" /> High Priority
+                          </span>
+                        )}
                       </div>
                     ))}
+                    <button
+                      onClick={() => { setNewCategory(category); setShowAdd(true); }}
+                      className="w-full flex items-center justify-center gap-2 py-3 text-sm text-[#94a3b8] hover:text-[#0b1c30] hover:bg-[#f8fafc] transition-colors border-t border-[#f1f5f9]"
+                    >
+                      <Plus className="w-4 h-4" /> Add {category} Item
+                    </button>
                   </div>
                 )}
               </div>
             );
           })}
+        </div>
+
+        {/* Right: Destination Card + Quick Actions */}
+        <div className="space-y-4">
+          {/* Destination Image */}
+          <div className="relative rounded-2xl overflow-hidden h-52">
+            <img src={activeTrip?.coverImage || '/images/dest-tokyo.jpg'} alt="Destination" className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+            <div className="absolute bottom-0 left-0 right-0 p-5">
+              <h3 className="text-2xl font-bold text-white font-['Montserrat']">
+                {activeTrip?.destination || 'Tokyo'} Awaits
+              </h3>
+              <p className="text-white/60 text-sm mt-1">Expected weather: 65°F - 75°F. Perfect for light layers.</p>
+            </div>
+          </div>
+
+          {/* Quick Add */}
+          {showAdd && (
+            <div className="card p-4">
+              <div className="flex flex-col gap-3">
+                <input
+                  type="text"
+                  value={newItem}
+                  onChange={(e) => setNewItem(e.target.value)}
+                  placeholder="Item name..."
+                  className="input-field"
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddItem()}
+                />
+                <div className="flex gap-2">
+                  <select
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value)}
+                    className="input-field flex-1"
+                  >
+                    {categories.map((cat) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                  <button onClick={handleAddItem} className="btn-primary text-sm py-2.5">Add</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex gap-3">
+            <button onClick={resetChecklist} className="btn-secondary flex-1 py-2.5 text-sm">
+              <RotateCcw className="w-4 h-4" /> Reset
+            </button>
+            <button className="btn-secondary flex-1 py-2.5 text-sm">
+              <Share2 className="w-4 h-4" /> Share
+            </button>
+          </div>
         </div>
       </div>
     </div>
