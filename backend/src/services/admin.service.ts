@@ -21,7 +21,7 @@ export async function listUsers(page = 1, limit = 20) {
     prisma.user.findMany({
       skip: (page - 1) * limit,
       take: limit,
-      select: { id: true, name: true, email: true, created_at: true, is_admin: true, _count: { select: { trips: true } } },
+      select: { id: true, first_name: true, last_name: true, email: true, phone: true, city: true, country: true, created_at: true, is_admin: true, _count: { select: { trips: true } } },
       orderBy: { created_at: 'desc' },
     }),
     prisma.user.count(),
@@ -35,7 +35,7 @@ export async function listAllTrips(page = 1, limit = 20) {
       skip: (page - 1) * limit,
       take: limit,
       include: {
-        user: { select: { id: true, name: true, email: true } },
+        user: { select: { id: true, first_name: true, last_name: true, email: true } },
         _count: { select: { stops: true, packing_items: true, notes: true } },
       },
       orderBy: { created_at: 'desc' },
