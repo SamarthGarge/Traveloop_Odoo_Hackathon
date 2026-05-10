@@ -1,178 +1,228 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useStore } from '../store/useStore';
-import {
-  Share2,
-  Save,
-  Bold,
-  Italic,
-  Underline,
-  List,
-  Image,
-  MapPin,
-  Calendar,
-  Plus,
-  CheckSquare,
-  Upload,
-  Flag,
-} from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import type { ApiNote } from '../store/useStore';
+import { ArrowLeft, Plus, Trash2, Pencil, Check, X, Loader2, StickyNote } from 'lucide-react';
+import { apiListNotes, apiCreateNote, apiUpdateNote, apiDeleteNote, extractError } from '../lib/api';
 
 export default function TripNotes() {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { activeTrip } = useStore();
-  const [activeDay, setActiveDay] = useState(0);
-  const [noteContent, setNoteContent] = useState('');
 
-  const days = [
-    { label: 'Day 3: Arashiyama', active: true },
-    { label: 'Day 4: Gion', active: false },
-    { label: 'Day 5: Nara', active: false },
-  ];
+  const [notes, setNotes] = useState<ApiNote[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [newContent, setNewContent] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState('');
 
-  const reminders = [
-    { text: 'Buy tickets for the Bamboo Grove train in advance.', done: false },
-    { text: 'Pack extra battery pack for photos.', done: true },
-  ];
+  const fetchNotes = () => {
+    if (!id) return;
+    setLoading(true);
+    apiListNotes(id)
+      .then((res) => setNotes((res.data ?? res) as ApiNote[]))
+      .catch((err) => setError(extractError(err)))
+      .finally(() => setLoading(false));
+  };
+  useEffect(() => { fetchNotes(); }, [id]);
 
-  const photos = [
-    '/images/dest-tokyo.jpg',
-    '/images/dest-kyoto.jpg',
-    '/images/dest-osaka.jpg',
-  ];
+  const handleAdd = async () => {
+    if (!id || !newContent.trim()) return;
+    setAdding(true);
+    try {
+      const res = await apiCreateNote(id, { content: newContent.trim() });
+      const note = res.data ?? res;
+      setNotes((prev) => [note, ...prev]);
+      setNewContent('');
+    } catch (err) {
+      setError(extractError(err));
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!id || !editingId || !editContent.trim()) return;
+    try {
+      const res = await apiUpdateNote(id, editingId, { content: editContent.trim() });
+      const updated = res.data ?? res;
+      setNotes((prev) => prev.map((n) => n.id === editingId ? updated : n));
+      setEditingId(null);
+    } catch (err) {
+      setError(extractError(err));
+    }
+  };
+
+  const handleDelete = async (noteId: string) => {
+    if (!id) return;
+    setNotes((prev) => prev.filter((n) => n.id !== noteId));
+    try {
+      await apiDeleteNote(id, noteId);
+    } catch (err) {
+      setError(extractError(err));
+      fetchNotes();
+    }
+  };
+
+  const startEdit = (note: ApiNote) => {
+    setEditingId(note.id);
+    setEditContent(note.content);
+  };
+
+  // Separate trip-level notes from stop-level notes
+  const tripNotes = notes.filter((n) => !n.stop_id);
+  const stopNotes = notes.filter((n) => n.stop_id);
 
   return (
     <div className="page-transition">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
-        <div>
-          <p className="text-[10px] font-semibold tracking-widest text-[#94a3b8] uppercase mb-1">JAPAN 2024</p>
-          <h1 className="text-2xl lg:text-3xl font-bold text-[#0b1c30] font-['Montserrat']">
-            {activeTrip?.name || 'Kyoto Reflections'}
-          </h1>
-        </div>
-        <div className="flex gap-3">
-          <button className="btn-secondary py-2.5 text-sm">
-            <Share2 className="w-4 h-4" /> Share Notes
-          </button>
-          <button className="btn-primary py-2.5 text-sm">
-            <Save className="w-4 h-4" /> Save Entry
-          </button>
-        </div>
-      </div>
-
-      {/* Day Tabs */}
-      <div className="flex gap-2 mb-6 flex-wrap">
-        {days.map((day, i) => (
-          <button
-            key={i}
-            onClick={() => setActiveDay(i)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
-              activeDay === i
-                ? 'bg-[#f1f5f9] text-[#0b1c30] border border-[#e2e8f0]'
-                : 'text-[#94a3b8] hover:text-[#64748B]'
-            }`}
-          >
-            <Calendar className="w-3.5 h-3.5" />
-            {day.label}
-          </button>
-        ))}
-        <button className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium text-[#94a3b8] hover:text-[#64748B] transition-all">
-          <Plus className="w-3.5 h-3.5" /> Add Day
+      <div className="flex items-center gap-4 mb-6">
+        <button onClick={() => navigate(-1)} className="w-9 h-9 flex items-center justify-center rounded-xl border border-[#e2e8f0] text-[#64748B] hover:bg-[#f1f5f9] transition-colors">
+          <ArrowLeft className="w-4 h-4" />
         </button>
+        <div>
+          <h1 className="text-xl font-bold text-[#0b1c30] font-['Montserrat']">Trip Notes</h1>
+          <p className="text-[#94a3b8] text-xs mt-0.5">{notes.length} note{notes.length !== 1 ? 's' : ''}</p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Editor */}
-        <div className="lg:col-span-2">
-          <div className="card overflow-hidden">
-            {/* Toolbar */}
-            <div className="flex items-center gap-1 p-3 border-b border-[#f1f5f9]">
-              {[Bold, Italic, Underline].map((Icon, i) => (
-                <button key={i} className="p-2 rounded-lg text-[#64748B] hover:bg-[#f1f5f9] hover:text-[#0b1c30] transition-colors">
-                  <Icon className="w-4 h-4" />
-                </button>
-              ))}
-              <div className="w-px h-5 bg-[#e2e8f0] mx-1" />
-              <button className="px-3 py-1.5 rounded-lg text-sm font-bold text-[#64748B] hover:bg-[#f1f5f9] hover:text-[#0b1c30] transition-colors">H1</button>
-              <button className="px-3 py-1.5 rounded-lg text-sm font-bold text-[#64748B] hover:bg-[#f1f5f9] hover:text-[#0b1c30] transition-colors">H2</button>
-              <div className="w-px h-5 bg-[#e2e8f0] mx-1" />
-              {[List, Image, MapPin].map((Icon, i) => (
-                <button key={i} className="p-2 rounded-lg text-[#64748B] hover:bg-[#f1f5f9] hover:text-[#0b1c30] transition-colors">
-                  <Icon className="w-4 h-4" />
-                </button>
-              ))}
-            </div>
+      {error && (
+        <div className="mb-4 p-3 rounded-xl bg-[#fef2f2] text-[#dc2626] text-sm border border-[#dc2626]/10">{error}</div>
+      )}
 
-            {/* Editor Area */}
-            <textarea
-              value={noteContent}
-              onChange={(e) => setNoteContent(e.target.value)}
-              placeholder="Start writing your journal entry..."
-              className="w-full min-h-[400px] p-6 text-sm text-[#0b1c30] placeholder:text-[#94a3b8] resize-none focus:outline-none leading-relaxed"
-            />
-          </div>
+      {/* Add note */}
+      <div className="card p-4 mb-6">
+        <textarea
+          rows={3}
+          value={newContent}
+          onChange={(e) => setNewContent(e.target.value)}
+          placeholder="Write a note about your trip... (visa reminders, packing thoughts, booking references)"
+          className="input-field resize-none text-sm"
+        />
+        <div className="flex justify-end mt-3">
+          <button
+            onClick={handleAdd}
+            disabled={adding || !newContent.trim()}
+            className="btn-primary text-sm py-2 disabled:opacity-50"
+          >
+            {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+            Add Note
+          </button>
         </div>
+      </div>
 
-        {/* Sidebar Widgets */}
-        <div className="space-y-4">
-          {/* Quick Reminders */}
-          <div className="card p-5">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Flag className="w-4 h-4 text-[#E8604C]" />
-                <h3 className="font-bold text-[#0b1c30] font-['Montserrat'] text-sm">Quick Reminders</h3>
-              </div>
-              <button className="w-6 h-6 rounded-full border border-[#e2e8f0] flex items-center justify-center text-[#94a3b8] hover:bg-[#f1f5f9] transition-colors">
-                <Plus className="w-3 h-3" />
-              </button>
-            </div>
-            <div className="space-y-2.5">
-              {reminders.map((r, i) => (
-                <div key={i} className="flex items-start gap-2.5">
-                  <div className={`w-4 h-4 rounded-sm border-2 flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                    r.done ? 'bg-[#E8604C] border-[#E8604C]' : 'border-[#e2e8f0]'
-                  }`}>
-                    {r.done && <CheckSquare className="w-3 h-3 text-white" />}
-                  </div>
-                  <p className={`text-sm leading-tight ${r.done ? 'line-through text-[#94a3b8]' : 'text-[#0b1c30]'}`}>
-                    {r.text}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Day Photos */}
-          <div className="card p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-bold text-[#0b1c30] font-['Montserrat'] text-sm">Day 3 Photos</h3>
-              <span className="text-xs text-[#94a3b8]">12 items</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {photos.map((photo, i) => (
-                <div key={i} className="aspect-square rounded-xl overflow-hidden">
-                  <img src={photo} alt={`Photo ${i + 1}`} className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
-                </div>
-              ))}
-              <button className="aspect-square rounded-xl bg-[#f1f5f9] flex flex-col items-center justify-center text-[#94a3b8] hover:bg-[#e2e8f0] transition-colors">
-                <Upload className="w-5 h-5 mb-1" />
-                <span className="text-xs">Upload</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Location */}
-          <div className="card p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#E8604C]/8 flex items-center justify-center text-[#E8604C] flex-shrink-0">
-              <MapPin className="w-5 h-5" />
-            </div>
+      {loading ? (
+        <div className="card p-8 text-center">
+          <Loader2 className="w-6 h-6 animate-spin text-[#E8604C] mx-auto" />
+        </div>
+      ) : notes.length === 0 ? (
+        <div className="card p-12 text-center">
+          <StickyNote className="w-12 h-12 text-[#e2e8f0] mx-auto mb-3" />
+          <p className="text-[#94a3b8]">No notes yet. Start capturing your thoughts!</p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {/* Trip-level notes */}
+          {tripNotes.length > 0 && (
             <div>
-              <p className="text-sm font-semibold text-[#0b1c30]">Arashiyama, Kyoto</p>
-              <p className="text-xs text-[#94a3b8]">Logged 2.4 miles walked today.</p>
+              <h2 className="font-bold text-[#0b1c30] mb-3">General Notes</h2>
+              <div className="space-y-3">
+                {tripNotes.map((note) => (
+                  <NoteCard
+                    key={note.id}
+                    note={note}
+                    editingId={editingId}
+                    editContent={editContent}
+                    setEditContent={setEditContent}
+                    startEdit={startEdit}
+                    handleSaveEdit={handleSaveEdit}
+                    cancelEdit={() => setEditingId(null)}
+                    handleDelete={handleDelete}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Stop-level notes */}
+          {stopNotes.length > 0 && (
+            <div>
+              <h2 className="font-bold text-[#0b1c30] mb-3">Stop Notes</h2>
+              <div className="space-y-3">
+                {stopNotes.map((note) => (
+                  <NoteCard
+                    key={note.id}
+                    note={note}
+                    editingId={editingId}
+                    editContent={editContent}
+                    setEditContent={setEditContent}
+                    startEdit={startEdit}
+                    handleSaveEdit={handleSaveEdit}
+                    cancelEdit={() => setEditingId(null)}
+                    handleDelete={handleDelete}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NoteCard({
+  note, editingId, editContent, setEditContent,
+  startEdit, handleSaveEdit, cancelEdit, handleDelete,
+}: {
+  note: ApiNote;
+  editingId: string | null;
+  editContent: string;
+  setEditContent: (v: string) => void;
+  startEdit: (n: ApiNote) => void;
+  handleSaveEdit: () => void;
+  cancelEdit: () => void;
+  handleDelete: (id: string) => void;
+}) {
+  const isEditing = editingId === note.id;
+  return (
+    <div className="card p-4 group">
+      {isEditing ? (
+        <>
+          <textarea
+            rows={3}
+            value={editContent}
+            onChange={(e) => setEditContent(e.target.value)}
+            className="input-field resize-none text-sm w-full"
+            autoFocus
+          />
+          <div className="flex justify-end gap-2 mt-2">
+            <button onClick={cancelEdit} className="btn-secondary text-xs py-1.5 px-3">
+              <X className="w-3.5 h-3.5" /> Cancel
+            </button>
+            <button onClick={handleSaveEdit} disabled={!editContent.trim()} className="btn-primary text-xs py-1.5 px-3 disabled:opacity-50">
+              <Check className="w-3.5 h-3.5" /> Save
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <p className="text-sm text-[#334155] whitespace-pre-wrap leading-relaxed">{note.content}</p>
+          <div className="flex items-center justify-between mt-3">
+            <p className="text-xs text-[#94a3b8]">
+              {new Date(note.updated_at).toLocaleDateString()} {new Date(note.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </p>
+            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button onClick={() => startEdit(note)} className="w-7 h-7 flex items-center justify-center rounded-lg text-[#94a3b8] hover:text-[#0b1c30] hover:bg-[#f1f5f9] transition-colors">
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
+              <button onClick={() => handleDelete(note.id)} className="w-7 h-7 flex items-center justify-center rounded-lg text-[#94a3b8] hover:text-[#dc2626] hover:bg-[#fef2f2] transition-colors">
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 }
