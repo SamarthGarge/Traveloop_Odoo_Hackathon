@@ -18,7 +18,15 @@ function formatUser(user: any) {
   return rest;
 }
 
-export async function register(data: { name: string; email: string; password: string }) {
+export async function register(data: {
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string;
+  city?: string;
+  country?: string;
+  password: string;
+}) {
   // Check for duplicate email
   const existing = await prisma.user.findUnique({ where: { email: data.email } });
   if (existing) {
@@ -29,8 +37,12 @@ export async function register(data: { name: string; email: string; password: st
 
   const user = await prisma.user.create({
     data: {
-      name: data.name,
+      first_name: data.first_name,
+      last_name: data.last_name,
       email: data.email,
+      phone: data.phone,
+      city: data.city,
+      country: data.country,
       password_hash,
     },
   });
