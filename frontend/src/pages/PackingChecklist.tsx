@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import type { ApiPackingItem } from '../store/useStore';
 import {
@@ -34,18 +34,89 @@ const CATEGORY_COLORS: Record<Category, string> = {
 export default function PackingChecklist() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { checklist, toggleChecklistItem, addChecklistItem, resetChecklist, activeTrip, trips, setActiveTrip } = useStore();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [newItem, setNewItem] = useState('');
-  const [newCategory, setNewCategory] = useState('Documents');
-  const [showAdd, setShowAdd] = useState(false);
-  const [sharedMode, setSharedMode] = useState(true);
-  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({
-    Documents: true,
-    Clothing: true,
-    Electronics: true,
-    Toiletries: true,
-  });
+
+  const [items, setItems] = useState<ApiPackingItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [newItemName, setNewItemName] = useState('');
+  const [newItemCategory, setNewItemCategory] = useState<Category>('other');
+  const [adding, setAdding] = useState(false);
+  const [activeCategory, setActiveCategory] = useState<Category | 'all'>('all');
+  const [resetting, setResetting] = useState(false);
+
+  const fetchItems = () => {
+    if (!id) return;
+    setLoading(true);
+    apiListPacking(id)
+      .then((res) => setItems((res.data ?? res) as ApiPackingItem[]))
+      .catch((err) => setError(extractError(err)))
+      .finally(() => setLoading(false));
+  };
+  useEffect(() => { fetchItems(); }, [id]);
+
+  const handleToggle = async (item: ApiPackingItem) => {
+    if (!id) return;
+    setItems((prev) => prev.map((i) => i.id === item.id ? { ...i, is_packed: !i.is_packed } : i));
+    try {
+      await apiUpdatePackingItem(id, item.id, { is_packed: !item.is_packed });
+    } catch {
+      setItems((prev) => prev.map((i) => i.id === item.id ? { ...i, is_packed: item.is_packed } : i));
+    }
+  };
+
+  const handleAdd = async () => {
+    if (!id || !newItemName.trim()) return;
+    setAdding(true);
+    try {
+      const res = await apiCreatePackingItem(id, { name: newItemName.trim(), category: newItemCategory });
+      const newItem = res.data ?? res;
+      setItems((prev) => [...prev, newItem]);
+      setNewItemName('');
+    } catch (err) {
+      setError(extractError(err));
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const handleDelete = async (itemId: string) => {
+    if (!id) return;
+    setItems((prev) => prev.filter((i) => i.id !== itemId));
+    try {
+      await apiDeletePackingItem(id, itemId);
+    } catch (err) {
+      setError(extractError(err));
+      fetchItems();
+    }
+  };
+
+  const handleReset = async () => {
+    if (!id || !confirm('Unpack all items?')) return;
+    setResetting(true);
+    try {
+      await apiResetPacking(id);
+      setItems((prev) => prev.map((i) => ({ ...i, is_packed: false })));
+    } catch (err) {
+      setError(extractError(err));
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  const filtered = activeCategory === 'all' ? items : items.filter((i) => i.category === activeCategory);
+  const packed = items.filter((i) => i.is_packed).length;
+  const progress = items.length > 0 ? Math.round((packed / items.length) * 100) : 0;
+
+  return (
+    <div className="page-transition">
+      {/* Header */}
+      <div className="flex items-center gap-4 mb-6">
+        <button onClick={() => navigate(-1)} className="w-9 h-9 flex items-center justify-center rounded-xl border border-[#e2e8f0] text-[#64748B] hover:bg-[#f1f5f9] transition-colors">
+          <ArrowLeft className="w-4 h-4" />
+        </button>
+        <div className="flex-1">
+          <h1 className="text-xl font-bold text-[#0b1c30] font-['Montserrat']">Packing Checklist</h1>
+          <p className="text-[#94a3b8] text-xs mt-0.5">{packed} of {items.length} items packed</p>
         </div>
         <button
           onClick={handleReset}
@@ -61,66 +132,63 @@ export default function PackingChecklist() {
         <div className="mb-4 p-3 rounded-xl bg-[#fef2f2] text-[#dc2626] text-sm border border-[#dc2626]/10">{error}</div>
       )}
 
-      {/* Full-Width Destination Banner */}
-      {activeTrip && (
-        <div className="relative rounded-2xl overflow-hidden h-56 mb-6 shadow-md">
-          <img
-            src={activeTrip.coverImage || '/images/dest-tokyo.jpg'}
-            alt={activeTrip.destination}
-            className="w-full h-full object-cover"
+      {/* Progress */}
+      <div className="card p-5 mb-6">
+        <div className="flex justify-between items-center mb-2">
+          <span className="text-sm font-medium text-[#0b1c30]">Packing Progress</span>
+          <span className="text-sm font-bold text-[#E8604C]">{progress}%</span>
+        </div>
+        <div className="h-2 bg-[#f1f5f9] rounded-full overflow-hidden">
+          <div
+            className="h-full bg-[#E8604C] rounded-full transition-all duration-500"
+            style={{ width: `${progress}%` }}
           />
-          {/* Gradient Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent" />
-          {/* Progress bar overlay at bottom */}
-          <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20">
-            <div
-              className="h-full bg-[#E8604C] transition-all duration-700 ease-out"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-          {/* Text */}
-          <div className="absolute inset-0 flex flex-col justify-center p-8">
-            <p className="text-white/60 text-xs font-semibold tracking-widest uppercase mb-1">Packing For</p>
-            <h2 className="text-3xl font-bold text-white font-heading drop-shadow-sm">
-              {activeTrip.destination} Awaits
-            </h2>
-            <p className="text-white/70 text-sm mt-1">
-              {activeTrip.startDate} → {activeTrip.endDate} · {progress}% packed
-            </p>
-          </div>
-          {/* Readiness badge */}
-          <div className="absolute top-4 right-4">
-            <div className="bg-white/20 backdrop-blur-md rounded-xl px-4 py-2 text-center">
-              <p className="text-white/70 text-[10px] font-semibold uppercase tracking-wider">Readiness</p>
-              <p className="text-white text-2xl font-bold font-heading">{progress}%</p>
-            </div>
-          </div>
         </div>
-      )}
-
-      {/* Trip Readiness */}
-      <div className="card p-6 mb-6">
-        <div className="flex items-start justify-between mb-3">
+        <div className="grid grid-cols-3 gap-3 mt-4 text-center text-xs">
           <div>
-            <h2 className="text-xl font-bold text-[#0b1c30] font-heading">Trip Readiness</h2>
-            <p className="text-sm text-[#64748B] mt-0.5">You're making good progress. {packedCount} of {totalCount} items packed.</p>
+            <p className="text-2xl font-bold text-[#0b1c30]">{items.length}</p>
+            <p className="text-[#94a3b8]">Total Items</p>
           </div>
-          <span className="text-4xl font-bold text-[#E8604C] font-heading">{progress}%</span>
-        </div>
-        <div className="h-2.5 bg-[#f1f5f9] rounded-full overflow-hidden">
-          <div className="h-full bg-[#E8604C] rounded-full transition-all duration-700 ease-out" style={{ width: `${progress}%` }} />
+          <div>
+            <p className="text-2xl font-bold text-[#059669]">{packed}</p>
+            <p className="text-[#94a3b8]">Packed</p>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-[#E8604C]">{items.length - packed}</p>
+            <p className="text-[#94a3b8]">Remaining</p>
+          </div>
         </div>
       </div>
 
-      {/* Categories - Full Width */}
-      <div className="space-y-4">
-          {categories.map((category) => {
-            const items = checklist.filter(
-              (item) =>
-                item.category === category &&
-                (!searchQuery || item.name.toLowerCase().includes(searchQuery.toLowerCase()))
-            );
-            if (items.length === 0) return null;
+      {/* Add Item */}
+      <div className="card p-4 mb-6">
+        <div className="flex gap-3">
+          <select
+            value={newItemCategory}
+            onChange={(e) => setNewItemCategory(e.target.value as Category)}
+            className="input-field text-sm py-2.5 flex-shrink-0 w-36"
+          >
+            {CATEGORIES.map((cat) => (
+              <option key={cat} value={cat}>{cat.charAt(0).toUpperCase() + cat.slice(1)}</option>
+            ))}
+          </select>
+          <input
+            type="text"
+            value={newItemName}
+            onChange={(e) => setNewItemName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+            placeholder="Add item (e.g., Passport, T-shirts)"
+            className="input-field text-sm flex-1"
+          />
+          <button
+            onClick={handleAdd}
+            disabled={adding || !newItemName.trim()}
+            className="btn-primary text-sm py-2.5 px-4 flex-shrink-0 disabled:opacity-50"
+          >
+            {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+          </button>
+        </div>
+      </div>
 
       {/* Category Filters */}
       <div className="flex gap-2 overflow-x-auto pb-2 mb-5">
@@ -174,112 +242,26 @@ export default function PackingChecklist() {
                     item.is_packed ? 'bg-[#E8604C] border-[#E8604C] text-white' : 'border-[#e2e8f0] hover:border-[#E8604C]'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-[#f1f5f9] flex items-center justify-center text-[#64748B]">
-                      <CatIcon className="w-4 h-4" />
-                    </div>
-                    <h3 className="font-bold text-[#0b1c30] font-heading text-base">{category}</h3>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="badge bg-[#f1f5f9] text-[#64748B]">{catPacked}/{items.length} Packed</span>
-                    {isExpanded ? <ChevronUp className="w-5 h-5 text-[#94a3b8]" /> : <ChevronDown className="w-5 h-5 text-[#94a3b8]" />}
-                  </div>
+                  {item.is_packed && <Check className="w-3 h-3" />}
                 </button>
-
-                {isExpanded && (
-                  <div className="border-t border-[#f1f5f9]">
-                    {/* Items Grid */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-px bg-[#f1f5f9]">
-                      {items.map((item) => (
-                        <div
-                          key={item.id}
-                          onClick={() => toggleChecklistItem(item.id)}
-                          className={`relative flex items-start gap-2.5 p-3.5 cursor-pointer transition-all bg-white hover:bg-[#f8fafc] group ${
-                            item.packed ? 'bg-[#fafffe]' : ''
-                          }`}
-                        >
-                          {/* Checkbox */}
-                          <div
-                            className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all flex-shrink-0 mt-0.5 ${
-                              item.packed
-                                ? 'bg-[#E8604C] border-[#E8604C]'
-                                : 'border-[#e2e8f0] group-hover:border-[#E8604C]/60'
-                            }`}
-                          >
-                            {item.packed && <Check className="w-3 h-3 text-white" />}
-                          </div>
-                          {/* Label */}
-                          <div className="flex-1 min-w-0">
-                            <span className={`text-sm leading-tight block ${
-                              item.packed ? 'line-through text-[#94a3b8]' : 'text-[#0b1c30]'
-                            }`}>
-                              {item.name}
-                            </span>
-                            {item.name.includes('Insurance') && (
-                              <span className="text-[10px] font-semibold text-[#dc2626] flex items-center gap-0.5 mt-0.5">
-                                <AlertTriangle className="w-3 h-3" /> Priority
-                              </span>
-                            )}
-                          </div>
-                          {/* Packed indicator dot */}
-                          {item.packed && (
-                            <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-[#E8604C]" />
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                    <button
-                      onClick={() => { setNewCategory(category); setShowAdd(true); }}
-                      className="w-full flex items-center justify-center gap-2 py-3 text-sm text-[#94a3b8] hover:text-[#0b1c30] hover:bg-[#f8fafc] transition-colors border-t border-[#f1f5f9]"
-                    >
-                      <Plus className="w-4 h-4" /> Add {category} Item
-                    </button>
-                  </div>
-                )}
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${colorClass}`}>
+                  <Icon className="w-3.5 h-3.5" />
+                </div>
+                <p className={`flex-1 text-sm font-medium transition-colors ${item.is_packed ? 'line-through text-[#94a3b8]' : 'text-[#0b1c30]'}`}>
+                  {item.name}
+                </p>
+                <span className="text-xs text-[#94a3b8] capitalize hidden sm:block">{item.category}</span>
+                <button
+                  onClick={() => handleDelete(item.id)}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg text-[#94a3b8] hover:text-[#dc2626] hover:bg-[#fef2f2] transition-colors flex-shrink-0"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
               </div>
             );
           })}
-      </div>
-
-      {/* Quick Add + Actions Row */}
-      <div className="flex flex-col sm:flex-row gap-4 mt-2">
-          {showAdd && (
-            <div className="card p-4">
-              <div className="flex flex-col gap-3">
-                <input
-                  type="text"
-                  value={newItem}
-                  onChange={(e) => setNewItem(e.target.value)}
-                  placeholder="Item name..."
-                  className="input-field"
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddItem()}
-                />
-                <div className="flex gap-2">
-                  <select
-                    value={newCategory}
-                    onChange={(e) => setNewCategory(e.target.value)}
-                    className="input-field flex-1"
-                  >
-                    {categories.map((cat) => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
-                  <button onClick={handleAddItem} className="btn-primary text-sm py-2.5">Add</button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Actions */}
-          <div className="flex gap-3 sm:ml-auto">
-            <button onClick={resetChecklist} className="btn-secondary py-2.5 text-sm px-6">
-              <RotateCcw className="w-4 h-4" /> Reset
-            </button>
-            <button className="btn-secondary py-2.5 text-sm px-6">
-              <Share2 className="w-4 h-4" /> Share
-            </button>
-          </div>
-      </div>
+        </div>
+      )}
     </div>
   );
 }

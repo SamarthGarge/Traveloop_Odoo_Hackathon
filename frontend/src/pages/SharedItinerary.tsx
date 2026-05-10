@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import type { ApiTrip, ApiStop } from '../store/useStore';
 import { MapPin, Calendar, Clock, Loader2, Share2, Copy } from 'lucide-react';
@@ -70,18 +70,15 @@ export default function SharedItinerary() {
   );
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
-      {/* Public Header - No sidebar, simplified navigation */}
-      <header className="bg-white border-b border-[#e2e8f0] sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-[#001b26] flex items-center justify-center">
-              <span className="text-white font-bold font-heading">T</span>
-            </div>
-            <span className="font-bold text-[#0b1c30] font-heading tracking-tight">Traveloop</span>
+    <div className="min-h-screen bg-[#f8fafc]">
+      {/* Top Bar */}
+      <div className="bg-white border-b border-[#e2e8f0] px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-full bg-[#E8604C] flex items-center justify-center">
+            <MapPin className="w-3.5 h-3.5 text-white" />
           </div>
           <span className="font-bold text-[#0b1c30]">Traveloop</span>
-          <span className="text-[#94a3b8] text-sm hidden sm:inline">— Shared Itinerary</span>
+          <span className="text-[#94a3b8] text-sm hidden sm:inline">ΓÇö Shared Itinerary</span>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -114,7 +111,7 @@ export default function SharedItinerary() {
           <div className="flex items-center gap-4 text-sm text-[#94a3b8]">
             <span className="flex items-center gap-1">
               <Calendar className="w-4 h-4" />
-              {new Date(trip.start_date).toLocaleDateString()} → {new Date(trip.end_date).toLocaleDateString()}
+              {new Date(trip.start_date).toLocaleDateString()} ΓåÆ {new Date(trip.end_date).toLocaleDateString()}
             </span>
             <span className="flex items-center gap-1">
               <Clock className="w-4 h-4" />
@@ -124,39 +121,25 @@ export default function SharedItinerary() {
               <MapPin className="w-4 h-4" />
               {stops.length} stops
             </span>
-            <button 
-              onClick={() => navigate('/login')}
-              className="px-4 py-2 rounded-lg text-xs font-semibold text-[#001b26] border border-[#e2e8f0] hover:bg-[#f1f5f9] transition-colors"
-            >
-              Sign In
-            </button>
-            <button 
-              onClick={() => navigate('/register')}
-              className="px-4 py-2 rounded-lg text-xs font-semibold bg-[#E8604C] text-white hover:bg-[#ae311e] transition-colors shadow-sm"
-            >
-              Copy Trip
-            </button>
           </div>
+          {trip.description && (
+            <p className="text-[#64748B] mt-3 text-sm leading-relaxed">{trip.description}</p>
+          )}
         </div>
-      </header>
 
-      <main className="max-w-5xl mx-auto px-4 py-8">
-        {/* Hero Banner */}
-        <div className="relative h-64 md:h-80 rounded-2xl overflow-hidden mb-8 border border-[#e2e8f0] shadow-sm">
-          <img 
-            src={trip.coverImage || 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&q=80&w=1200'} 
-            alt={trip.name}
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#001b26]/90 via-[#001b26]/40 to-transparent flex flex-col justify-end p-6 md:p-10">
-            <h1 className="text-3xl md:text-5xl font-bold text-white font-heading mb-3">
-              {trip.name}
-            </h1>
-            <div className="flex flex-wrap items-center gap-4 text-white/90 text-sm">
-              <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4" /> {trip.destination}</span>
-              <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4" /> {trip.startDate} to {trip.endDate}</span>
-              <span className="flex items-center gap-1.5"><DollarSign className="w-4 h-4" /> Est. ₹{trip.budget}</span>
-            </div>
+        {/* Stops */}
+        {stops.length === 0 ? (
+          <div className="card p-8 text-center">
+            <MapPin className="w-10 h-10 text-[#e2e8f0] mx-auto mb-2" />
+            <p className="text-[#94a3b8]">No stops added to this itinerary.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {stops.map((stop, idx) => (
+              <div key={stop.id} className="card overflow-hidden">
+                <div className="flex items-center gap-3 p-4 border-b border-[#f1f5f9]">
+                  <div className="w-8 h-8 rounded-full bg-[#E8604C] text-white text-sm font-bold flex items-center justify-center flex-shrink-0">
+                    {idx + 1}
                   </div>
                   <div>
                     <p className="font-bold text-[#0b1c30]">
@@ -164,7 +147,7 @@ export default function SharedItinerary() {
                     </p>
                     <p className="text-xs text-[#94a3b8] flex items-center gap-1 mt-0.5">
                       <Calendar className="w-3 h-3" />
-                      {new Date(stop.arrival_date).toLocaleDateString()} → {new Date(stop.departure_date).toLocaleDateString()}
+                      {new Date(stop.arrival_date).toLocaleDateString()} ΓåÆ {new Date(stop.departure_date).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
@@ -179,63 +162,16 @@ export default function SharedItinerary() {
                           <p className="text-sm font-medium text-[#0b1c30]">{sa.activity?.name}</p>
                           <p className="text-xs text-[#94a3b8]">
                             {sa.activity?.type}
-                            {sa.scheduled_time && ` • ${sa.scheduled_time}`}
-                            {sa.activity?.cost && ` • $${Number(sa.activity.cost).toFixed(0)}`}
+                            {sa.scheduled_time && ` ΓÇó ${sa.scheduled_time}`}
+                            {sa.activity?.cost && ` ΓÇó $${Number(sa.activity.cost).toFixed(0)}`}
                           </p>
                         </div>
                       </div>
                     ))}
                   </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Sidebar - Actions */}
-          <div className="space-y-6">
-            <div className="card p-6 sticky top-24">
-              <h3 className="font-bold text-[#0b1c30] font-heading mb-4 flex items-center gap-2">
-                <Share2 className="w-4 h-4 text-[#E8604C]" />
-                Share this Trip
-              </h3>
-              
-              <div className="space-y-4">
-                <button 
-                  onClick={handleCopyLink}
-                  className={`w-full py-2.5 rounded-lg border text-sm font-medium flex items-center justify-center gap-2 transition-all ${
-                    copied 
-                      ? 'bg-[#ecfdf5] border-[#059669]/20 text-[#059669]' 
-                      : 'border-[#e2e8f0] text-[#0b1c30] hover:bg-[#f1f5f9]'
-                  }`}
-                >
-                  <LinkIcon className="w-4 h-4" />
-                  {copied ? 'Link Copied!' : 'Copy Link'}
-                </button>
-                
-                <div className="flex gap-2">
-                  <button className="flex-1 py-2.5 rounded-lg bg-[#1877F2]/10 text-[#1877F2] hover:bg-[#1877F2]/20 transition-colors flex items-center justify-center">
-                    <Facebook className="w-4 h-4" />
-                  </button>
-                  <button className="flex-1 py-2.5 rounded-lg bg-[#1DA1F2]/10 text-[#1DA1F2] hover:bg-[#1DA1F2]/20 transition-colors flex items-center justify-center">
-                    <Twitter className="w-4 h-4" />
-                  </button>
-                </div>
+                )}
               </div>
-
-              <div className="mt-8 pt-6 border-t border-[#e2e8f0]">
-                <h3 className="font-bold text-[#0b1c30] font-heading text-sm mb-2">Like this trip?</h3>
-                <p className="text-xs text-[#64748B] mb-4">
-                  Copy this itinerary to your own Traveloop account and customize it for your needs.
-                </p>
-                <button 
-                  onClick={() => navigate('/register')}
-                  className="w-full btn-primary flex items-center justify-center gap-2"
-                >
-                  <Copy className="w-4 h-4" />
-                  Copy Trip to My Account
-                </button>
-              </div>
-            </div>
+            ))}
           </div>
         )}
 

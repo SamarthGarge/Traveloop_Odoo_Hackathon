@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { ApiCity, ApiActivity } from '../store/useStore';
 import { Search, MapPin, Clock, DollarSign, Loader2, Globe } from 'lucide-react';
@@ -42,10 +42,10 @@ export default function ActivitySearch() {
 
   return (
     <div className="page-transition">
-      {/* Hero */}
-      <div className="text-center mb-8">
-        <h1 className="text-3xl lg:text-4xl font-bold text-[#0b1c30] font-heading mb-2">
-          Where do you want to go?
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-2xl lg:text-3xl font-bold text-[#0b1c30] font-['Montserrat'] mb-1">
+          Explore Activities
         </h1>
         <p className="text-[#64748B] text-sm">Browse activities for your destinations</p>
       </div>
@@ -101,101 +101,50 @@ export default function ActivitySearch() {
               className="input-field pl-10 text-sm"
             />
           </div>
-          <button className="btn-primary py-3 px-6 text-sm rounded-xl">Explore</button>
-        </div>
-      </div>
-
-      {/* Category Pills */}
-      <div className="flex items-center justify-center gap-2 mb-8 flex-wrap">
-        {categories.map((cat) => {
-          const Icon = categoryIcons[cat] || Star;
-          return (
-            <button
-              key={cat}
-              onClick={() => setActiveCategory(activeCategory === cat ? '' : cat)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                activeCategory === cat
-                  ? 'bg-[#001b26] text-white'
-                  : 'bg-white text-[#64748B] border border-[#e2e8f0] hover:bg-[#f1f5f9] hover:text-[#0b1c30]'
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              {cat}
-            </button>
-          );
-        })}
-        <button className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all bg-white text-[#E8604C] border border-[#E8604C]/20 hover:bg-[#E8604C]/5`}>
-          <Bookmark className="w-4 h-4" />
-          Saved
-        </button>
-      </div>
-
-      {/* Trending Destinations */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-xl font-bold text-[#0b1c30] font-heading">Trending Destinations</h2>
-            <p className="text-sm text-[#94a3b8] mt-0.5">Highly rated by the Traveloop community right now.</p>
-          </div>
-          <button className="text-sm text-[#64748B] hover:text-[#0b1c30] font-medium flex items-center gap-1 transition-colors">
-            View all <span className="text-lg">→</span>
-          </button>
-        </div>
-
-        {/* Bento Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-[220px] lg:auto-rows-[260px]">
-          {filteredCities.slice(0, 5).map((dest, i) => (
-            <button
-              key={dest.id}
-              onClick={() => { setSelectedCity(dest.name); setViewMode('activities'); }}
-              className={`group relative rounded-2xl overflow-hidden text-left ${
-                i === 0 ? 'row-span-2 col-span-1 lg:col-span-2' : ''
-              }`}
-            >
-              <img
-                src={dest.image}
-                alt={dest.name}
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-              
-              {/* Bookmark */}
-              <button className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center text-[#64748B] hover:text-[#E8604C] transition-colors z-10">
-                <Bookmark className="w-4 h-4" />
+          <div className="flex gap-2 overflow-x-auto">
+            {allTypes.map((type) => (
+              <button
+                key={type}
+                onClick={() => setTypeFilter(type)}
+                className={`px-3 py-2 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
+                  typeFilter === type ? 'bg-[#001b26] text-white' : 'bg-white border border-[#e2e8f0] text-[#64748B] hover:bg-[#f1f5f9]'
+                }`}
+              >
+                {type}
               </button>
             ))}
           </div>
         </div>
       )}
 
-              {/* Content */}
-              <div className="absolute bottom-0 left-0 right-0 p-4 lg:p-5">
-                {i === 0 && (
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="badge bg-[#E8604C] text-white text-[10px]">CULTURE</span>
-                    <span className="badge bg-white/20 text-white text-[10px] backdrop-blur-sm flex items-center gap-1">
-                      <Star className="w-3 h-3 fill-current" /> {dest.popularity ? (dest.popularity / 20).toFixed(1) : '4.9'}
-                    </span>
-                  </div>
-                )}
-                <h3 className={`text-white font-bold font-heading ${i === 0 ? 'text-2xl lg:text-3xl' : 'text-base'}`}>
-                  {dest.name}, {dest.country}
-                </h3>
-                {i === 0 && (
-                  <p className="text-white/60 text-sm mt-1 line-clamp-2">{dest.description}</p>
-                )}
+      {/* Activities */}
+      {!selectedCity ? (
+        <div className="card p-12 text-center">
+          <Globe className="w-12 h-12 text-[#e2e8f0] mx-auto mb-3" />
+          <p className="text-[#94a3b8]">Select a destination above to browse activities</p>
+        </div>
+      ) : loadingActivities ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="card overflow-hidden animate-pulse">
+              <div className="h-36 bg-[#f1f5f9]" />
+              <div className="p-4 space-y-2">
+                <div className="h-4 bg-[#f1f5f9] rounded w-3/4" />
+                <div className="h-3 bg-[#f1f5f9] rounded w-1/2" />
               </div>
             </div>
           ))}
         </div>
-      </div>
-
-      {/* Activity List when city selected */}
-      {selectedCity && viewMode === 'activities' && (
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-4">
-            <h2 className="text-xl font-bold text-[#0b1c30] font-heading">Activities in {selectedCity}</h2>
-            <button onClick={() => { setSelectedCity(''); setViewMode('cities'); }} className="text-sm text-[#94a3b8] hover:text-[#64748B]">Clear</button>
+      ) : filtered.length === 0 ? (
+        <div className="card p-12 text-center">
+          <p className="text-[#94a3b8]">No activities found for {selectedCity.name}.</p>
+        </div>
+      ) : (
+        <>
+          <div className="flex items-center gap-2 mb-4">
+            <MapPin className="w-4 h-4 text-[#E8604C]" />
+            <h2 className="font-bold text-[#0b1c30]">{selectedCity.name}, {selectedCity.country}</h2>
+            <span className="text-sm text-[#94a3b8]">ΓÇö {filtered.length} activities</span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {filtered.map((activity) => (
@@ -232,7 +181,7 @@ export default function ActivitySearch() {
                       onClick={() => navigate('/trips/new')}
                       className="text-xs font-medium text-[#E8604C] hover:text-[#ae311e] transition-colors"
                     >
-                      Plan Trip →
+                      Plan Trip ΓåÆ
                     </button>
                   </div>
                 </div>

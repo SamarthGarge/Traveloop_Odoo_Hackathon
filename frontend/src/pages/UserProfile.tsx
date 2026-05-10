@@ -1,20 +1,8 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import {
-  Edit3,
-  Heart,
-  CreditCard,
-  Shield,
-  ChevronRight,
-  Mountain,
-  Sparkles,
-  Palmtree,
-  UtensilsCrossed,
-  Landmark,
-  Trees,
-  Plus,
-  LogOut,
-  Trash2,
+  User, Mail, Phone, MapPin, Lock, Trash2, Eye, EyeOff,
+  Loader2, Check, AlertTriangle,
 } from 'lucide-react';
 import {
   apiGetProfile, apiUpdateProfile, apiChangePassword,
@@ -22,21 +10,66 @@ import {
 } from '../lib/api';
 
 export default function UserProfile() {
-  const navigate = useNavigate();
-  const { user, updateProfile, logout } = useStore();
-  const [editMode, setEditMode] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleteInput, setDeleteInput] = useState('');
-  const [form, setForm] = useState({
-    firstName: user?.firstName || 'Alex',
-    lastName: user?.lastName || 'Mercer',
-    email: user?.email || 'alex.mercer@example.com',
-    language: user?.language || 'English (US)',
-  });
+  const { user, updateUser, logout } = useStore();
 
-  const handleSave = () => {
-    updateProfile(form);
-    setEditMode(false);
+  const [form, setForm] = useState({
+    first_name: user?.firstName ?? '',
+    last_name: user?.lastName ?? '',
+    phone: user?.phone ?? '',
+    city: user?.city ?? '',
+    country: user?.country ?? '',
+  });
+  const [saving, setSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [profileError, setProfileError] = useState('');
+
+  const [passwordForm, setPasswordForm] = useState({
+    current_password: '',
+    new_password: '',
+    confirm_password: '',
+  });
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [showCurrentPwd, setShowCurrentPwd] = useState(false);
+  const [showNewPwd, setShowNewPwd] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+
+  // Fetch fresh profile
+  useEffect(() => {
+    apiGetProfile().then((res) => {
+      const d = res.data ?? res;
+      setForm({
+        first_name: d.first_name ?? '',
+        last_name: d.last_name ?? '',
+        phone: d.phone ?? '',
+        city: d.city ?? '',
+        country: d.country ?? '',
+      });
+    }).catch(() => {});
+  }, []);
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setProfileError('');
+    try {
+      const res = await apiUpdateProfile(form);
+      const d = res.data ?? res;
+      updateUser({
+        firstName: d.first_name,
+        lastName: d.last_name,
+        phone: d.phone,
+        city: d.city,
+        country: d.country,
+      });
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (err) {
+      setProfileError(extractError(err));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleChangePassword = async (e: React.FormEvent) => {
@@ -82,31 +115,23 @@ export default function UserProfile() {
   return (
     <div className="page-transition max-w-2xl">
       <div className="mb-8">
-        <h1 className="text-2xl lg:text-3xl font-bold text-[#0b1c30] font-heading">Profile & Settings</h1>
-        <p className="text-[#64748B] text-sm mt-1">Manage your account details and travel preferences.</p>
+        <h1 className="text-2xl font-bold text-[#0b1c30] font-['Montserrat']">Profile Settings</h1>
+        <p className="text-[#64748B] text-sm mt-1">Manage your account details and preferences</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column */}
-        <div className="space-y-6">
-          {/* Avatar Card */}
-          <div className="card p-6 text-center">
-            <div className="relative w-28 h-28 mx-auto mb-4">
-              <img
-                src={user?.photo || '/images/user-avatar.jpg'}
-                alt="Profile"
-                className="w-full h-full rounded-full object-cover"
-              />
-              <button className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-[#001b26] flex items-center justify-center text-white shadow-md hover:bg-[#0d313f] transition-colors">
-                <Edit3 className="w-3.5 h-3.5" />
-              </button>
-            </div>
-            <h2 className="text-lg font-bold text-[#0b1c30] font-heading">
-              {user?.firstName || 'Alex'} {user?.lastName || 'Mercer'}
-            </h2>
-            <p className="text-sm text-[#64748B] mt-1">{user?.bio || 'Global Explorer & Food Enthusiast'}</p>
-            <p className="text-xs text-[#94a3b8] mt-2">{user?.city || 'San Francisco'}, CA • Joined 2022</p>
-          </div>
+      {/* Avatar */}
+      <div className="card p-6 mb-5 flex items-center gap-5">
+        <div className="w-16 h-16 rounded-full bg-[#E8604C]/10 flex items-center justify-center text-[#E8604C] text-2xl font-bold flex-shrink-0">
+          {(user?.firstName?.[0] ?? '?').toUpperCase()}
+        </div>
+        <div>
+          <p className="font-bold text-[#0b1c30] text-lg">{user?.firstName} {user?.lastName}</p>
+          <p className="text-sm text-[#94a3b8]">{user?.email}</p>
+          {user?.isAdmin && (
+            <span className="badge bg-[#E8604C]/10 text-[#E8604C] text-[10px] mt-1">Administrator</span>
+          )}
+        </div>
+      </div>
 
       {/* Profile Form */}
       <form onSubmit={handleSaveProfile} className="card p-6 mb-5 space-y-5">
@@ -139,210 +164,94 @@ export default function UserProfile() {
           </div>
         </div>
 
-        {/* Right Column */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Account Info */}
-          <div className="card p-6">
-            <h3 className="text-xl font-bold text-[#0b1c30] font-heading mb-6">Account Information</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-medium text-[#64748B] mb-1.5 block">First Name</label>
-                <input
-                  type="text"
-                  value={form.firstName}
-                  onChange={(e) => setForm({ ...form, firstName: e.target.value })}
-                  disabled={!editMode}
-                  className="input-field disabled:bg-[#f8fafc] disabled:text-[#64748B]"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-[#64748B] mb-1.5 block">Last Name</label>
-                <input
-                  type="text"
-                  value={form.lastName}
-                  onChange={(e) => setForm({ ...form, lastName: e.target.value })}
-                  disabled={!editMode}
-                  className="input-field disabled:bg-[#f8fafc] disabled:text-[#64748B]"
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <label className="text-xs font-medium text-[#64748B] mb-1.5 block">Email Address</label>
-                <input
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  disabled={!editMode}
-                  className="input-field disabled:bg-[#f8fafc] disabled:text-[#64748B]"
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <label className="text-xs font-medium text-[#64748B] mb-1.5 block">Password</label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="password"
-                    value="••••••••"
-                    disabled
-                    className="input-field flex-1 disabled:bg-[#f8fafc] disabled:text-[#64748B]"
-                  />
-                  <button className="text-sm font-medium text-[#64748B] hover:text-[#0b1c30] transition-colors">Change</button>
-                </div>
-              </div>
-              <div className="sm:col-span-2">
-                <label className="text-xs font-medium text-[#64748B] mb-1.5 block">Language Preference</label>
-                <select
-                  value={form.language || 'English (US)'}
-                  onChange={(e) => setForm({ ...form, language: e.target.value })}
-                  disabled={!editMode}
-                  className="input-field disabled:bg-[#f8fafc] disabled:text-[#64748B]"
-                >
-                  <option value="English (US)">English (US)</option>
-                  <option value="English (UK)">English (UK)</option>
-                  <option value="Spanish">Spanish</option>
-                  <option value="French">French</option>
-                  <option value="German">German</option>
-                </select>
-              </div>
-            </div>
-            <div className="flex justify-end mt-6">
-              {editMode ? (
-                <div className="flex gap-3">
-                  <button onClick={() => setEditMode(false)} className="btn-secondary py-2.5 text-sm">Cancel</button>
-                  <button onClick={handleSave} className="btn-primary py-2.5 text-sm">Save Changes</button>
-                </div>
-              ) : (
-                <button onClick={() => setEditMode(true)} className="btn-primary py-2.5 text-sm">
-                  Edit Profile
-                </button>
-              )}
-            </div>
+        <div>
+          <label className="block text-xs font-medium text-[#64748B] mb-1.5">
+            <Mail className="w-3.5 h-3.5 inline mr-1" /> Email Address
+          </label>
+          <input
+            type="email"
+            value={user?.email ?? ''}
+            disabled
+            className="input-field opacity-50 cursor-not-allowed"
+          />
+          <p className="text-xs text-[#94a3b8] mt-1">Email cannot be changed</p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-[#64748B] mb-1.5">
+              <Phone className="w-3.5 h-3.5 inline mr-1" /> Phone
+            </label>
+            <input
+              type="text"
+              value={form.phone}
+              onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+              placeholder="+1 555 000 0000"
+              className="input-field"
+            />
           </div>
-
-          {/* Travel Preferences */}
-          <div className="card p-6">
-            <h3 className="text-xl font-bold text-[#0b1c30] font-heading mb-4">Travel Preferences</h3>
-            
-            <div className="mb-5">
-              <p className="text-sm font-semibold text-[#0b1c30] mb-3">Preferred Travel Style</p>
-              <div className="flex flex-wrap gap-2">
-                {travelStyles.map((style) => (
-                  <button
-                    key={style.label}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                      style.active
-                        ? 'bg-[#001b26] text-white'
-                        : 'bg-white text-[#64748B] border border-[#e2e8f0] hover:bg-[#f1f5f9]'
-                    }`}
-                  >
-                    <style.icon className="w-4 h-4" />
-                    {style.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <p className="text-sm font-semibold text-[#0b1c30] mb-3">Interests</p>
-              <div className="flex flex-wrap gap-2">
-                {interests.map((item) => (
-                  <span
-                    key={item.label}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-white text-[#64748B] border border-[#e2e8f0]"
-                  >
-                    <item.icon className="w-4 h-4" />
-                    {item.label}
-                  </span>
-                ))}
-                <button className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium text-[#94a3b8] border border-dashed border-[#e2e8f0] hover:bg-[#f1f5f9] hover:text-[#64748B] transition-colors">
-                  <Plus className="w-4 h-4" /> Add Interest
-                </button>
-              </div>
-            </div>
+          <div>
+            <label className="block text-xs font-medium text-[#64748B] mb-1.5">
+              <MapPin className="w-3.5 h-3.5 inline mr-1" /> Country
+            </label>
+            <input
+              type="text"
+              value={form.country}
+              onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))}
+              placeholder="e.g., United States"
+              className="input-field"
+            />
           </div>
         </div>
 
-          {/* Saved Destinations */}
-          <div className="card p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-[#0b1c30] font-heading">Saved Destinations</h3>
-              <button className="text-sm font-medium text-[#E8604C] hover:text-[#ae311e] transition-colors">View All</button>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {[
-                { name: 'Kyoto, Japan', image: '/images/dest-tokyo.jpg', saved: '2 days ago' },
-                { name: 'Reykjavik, Iceland', image: '/images/dest-iceland.jpg', saved: '1 week ago' },
-              ].map((dest, i) => (
-                <div key={i} className="flex items-center gap-3 p-3 rounded-xl border border-[#e2e8f0] hover:border-[#E8604C]/30 hover:bg-[#E8604C]/5 transition-all cursor-pointer group overflow-hidden">
-                  <img src={dest.image} alt={dest.name} className="w-14 h-14 rounded-lg object-cover" />
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-[#0b1c30] text-sm truncate">{dest.name}</h4>
-                    <p className="text-xs text-[#64748B] mt-0.5">Saved {dest.saved}</p>
-                  </div>
-                  <Heart className="w-4 h-4 text-[#E8604C] fill-current" />
-                </div>
-              ))}
-            </div>
-          </div>
+        <div>
+          <label className="block text-xs font-medium text-[#64748B] mb-1.5">
+            <MapPin className="w-3.5 h-3.5 inline mr-1" /> City
+          </label>
+          <input
+            type="text"
+            value={form.city}
+            onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
+            placeholder="e.g., New York"
+            className="input-field"
+          />
+        </div>
 
-          {/* Danger Zone */}
-          <div className="card p-6 border border-red-100">
-            <h3 className="text-base font-bold text-[#0b1c30] font-heading mb-1">Danger Zone</h3>
-            <p className="text-sm text-[#64748B] mb-4">
-              Once you delete your account, all your trips, notes, and data will be permanently removed. This action cannot be undone.
-            </p>
-            {!showDeleteConfirm ? (
-              <button
-                onClick={() => setShowDeleteConfirm(true)}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-[#dc2626] border border-[#dc2626]/30 hover:bg-[#fef2f2] transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-                Delete My Account
-              </button>
-            ) : (
-              <div className="bg-[#fef2f2] rounded-xl p-4 border border-[#dc2626]/20 space-y-3">
-                <p className="text-sm font-medium text-[#dc2626]">
-                  Type <strong>DELETE</strong> to confirm account deletion:
-                </p>
-                <input
-                  type="text"
-                  value={deleteInput}
-                  onChange={(e) => setDeleteInput(e.target.value)}
-                  placeholder="Type DELETE here"
-                  className="input-field border-[#dc2626]/30 focus:ring-[#dc2626]/20 text-sm"
-                />
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => { setShowDeleteConfirm(false); setDeleteInput(''); }}
-                    className="btn-secondary py-2 text-xs"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    disabled={deleteInput !== 'DELETE'}
-                    onClick={() => {
-                      logout();
-                      navigate('/login');
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-[#dc2626] text-white hover:bg-[#b91c1c] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    Permanently Delete
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+        <div className="flex justify-end pt-2">
+          <button type="submit" disabled={saving} className="btn-primary disabled:opacity-60">
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saveSuccess ? <Check className="w-4 h-4" /> : null}
+            {saveSuccess ? 'Saved!' : 'Save Changes'}
+          </button>
+        </div>
+      </form>
 
-          {/* Mobile Logout Action */}
-          <div className="md:hidden pt-4">
-            <button 
-              onClick={() => {
-                logout();
-                navigate('/login');
-              }}
-              className="w-full bg-white border border-[#e2e8f0] hover:border-[#E8604C]/30 hover:bg-[#fef2f2] text-[#E8604C] py-3.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-sm"
-            >
-              <LogOut className="w-4 h-4" />
-              Log Out
+      {/* Change Password */}
+      <form onSubmit={handleChangePassword} className="card p-6 mb-5 space-y-4">
+        <h2 className="font-bold text-[#0b1c30] text-base">Change Password</h2>
+
+        {passwordError && (
+          <div className="p-3 rounded-xl bg-[#fef2f2] text-[#dc2626] text-sm border border-[#dc2626]/10">{passwordError}</div>
+        )}
+        {passwordSuccess && (
+          <div className="p-3 rounded-xl bg-[#f0fdf4] text-[#059669] text-sm border border-[#059669]/10">
+            Password changed successfully!
+          </div>
+        )}
+
+        <div>
+          <label className="block text-xs font-medium text-[#64748B] mb-1.5">
+            <Lock className="w-3.5 h-3.5 inline mr-1" /> Current Password
+          </label>
+          <div className="relative">
+            <input
+              type={showCurrentPwd ? 'text' : 'password'}
+              value={passwordForm.current_password}
+              onChange={(e) => setPasswordForm((f) => ({ ...f, current_password: e.target.value }))}
+              className="input-field pr-10"
+              placeholder="ΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇóΓÇó"
+            />
+            <button type="button" onClick={() => setShowCurrentPwd(!showCurrentPwd)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8]">
+              {showCurrentPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           </div>
         </div>
