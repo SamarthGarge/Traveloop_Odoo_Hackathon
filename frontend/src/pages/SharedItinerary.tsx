@@ -1,53 +1,73 @@
-import { useState } from 'react';
-import { Share2, Copy, Facebook, Twitter, Link as LinkIcon, MapPin, Calendar, Clock, DollarSign } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import type { ApiTrip, ApiStop } from '../store/useStore';
+import { MapPin, Calendar, Clock, Loader2, Share2, Copy } from 'lucide-react';
+import { apiGetPublicTrip, apiCopyPublicTrip, extractError } from '../lib/api';
 import { useStore } from '../store/useStore';
-import { useNavigate } from 'react-router-dom';
 
 export default function SharedItinerary() {
+  const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
-  const { activeTrip } = useStore();
-  const [copied, setCopied] = useState(false);
+  const { isLoggedIn } = useStore();
 
-  // Fallback data if no active trip
-  const trip = activeTrip || {
-    name: 'Epic Japan Adventure',
-    destination: 'Tokyo, Kyoto, Osaka',
-    startDate: '2025-04-10',
-    endDate: '2025-04-24',
-    coverImage: '/images/dest-tokyo.jpg',
-    description: 'A 14-day journey through Japan covering modern cities, ancient temples, and amazing food.',
-    createdBy: 'Alex Chen',
-    budget: 4500,
-  };
+  const [trip, setTrip] = useState<ApiTrip | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [copying, setCopying] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
 
-  const itineraryDays = [
-    {
-      day: 1,
-      date: 'April 10, 2025',
-      location: 'Tokyo',
-      activities: [
-        { time: '10:00 AM', title: 'Arrive at Narita Airport', type: 'transport' },
-        { time: '02:00 PM', title: 'Check-in at Shinjuku Hotel', type: 'accommodation' },
-        { time: '06:00 PM', title: 'Dinner in Omoide Yokocho', type: 'food' },
-      ]
-    },
-    {
-      day: 2,
-      date: 'April 11, 2025',
-      location: 'Tokyo',
-      activities: [
-        { time: '09:00 AM', title: 'Senso-ji Temple Visit', type: 'sightseeing' },
-        { time: '01:00 PM', title: 'Lunch at Tsukiji Outer Market', type: 'food' },
-        { time: '04:00 PM', title: 'Akihabara Electronics Town', type: 'shopping' },
-      ]
+  useEffect(() => {
+    if (!token) { setError('Invalid share link.'); setLoading(false); return; }
+    apiGetPublicTrip(token)
+      .then((res) => setTrip(res.data ?? res))
+      .catch((err) => setError(extractError(err)))
+      .finally(() => setLoading(false));
+  }, [token]);
+
+  const handleCopy = async () => {
+    if (!token) return;
+    if (!isLoggedIn) { navigate('/login'); return; }
+    setCopying(true);
+    try {
+      await apiCopyPublicTrip(token);
+      setCopySuccess(true);
+      setTimeout(() => navigate('/trips'), 2000);
+    } catch (err) {
+      setError(extractError(err));
+    } finally {
+      setCopying(false);
     }
-  ];
-
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(window.location.href);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
   };
+
+  const shareUrl = `${window.location.origin}/shared/${token}`;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#f8fafc]">
+        <Loader2 className="w-8 h-8 animate-spin text-[#E8604C]" />
+      </div>
+    );
+  }
+
+  if (error || !trip) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#f8fafc]">
+        <div className="text-center">
+          <MapPin className="w-12 h-12 text-[#e2e8f0] mx-auto mb-3" />
+          <p className="text-[#0b1c30] font-bold mb-2">Trip Not Found</p>
+          <p className="text-[#94a3b8] text-sm mb-4">{error || 'This itinerary is no longer public.'}</p>
+          <button onClick={() => navigate('/')} className="btn-primary">
+            Go to Traveloop
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const stops = (trip.stops || []).sort((a, b) => a.order_index - b.order_index);
+  const duration = Math.ceil(
+    (new Date(trip.end_date).getTime() - new Date(trip.start_date).getTime()) / (1000 * 60 * 60 * 24)
+  );
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
@@ -60,9 +80,49 @@ export default function SharedItinerary() {
             </div>
             <span className="font-bold text-[#0b1c30] font-heading tracking-tight">Traveloop</span>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="hidden md:inline-block text-xs text-[#64748B]">
-              Created by <span className="font-semibold text-[#0b1c30]">{trip.createdBy}</span>
+          <span className="font-bold text-[#0b1c30]">Traveloop</span>
+          <span className="text-[#94a3b8] text-sm hidden sm:inline">— Shared Itinerary</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => { navigator.clipboard.writeText(shareUrl); }}
+            className="btn-secondary text-sm py-2"
+          >
+            <Share2 className="w-4 h-4" /> Share
+          </button>
+          <button
+            onClick={handleCopy}
+            disabled={copying || copySuccess}
+            className="btn-primary text-sm py-2"
+          >
+            {copying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Copy className="w-4 h-4" />}
+            {copySuccess ? 'Copied to My Trips!' : 'Copy Trip'}
+          </button>
+        </div>
+      </div>
+
+      <div className="max-w-2xl mx-auto px-4 py-8">
+        {/* Trip header */}
+        {trip.cover_photo_url && (
+          <div className="rounded-2xl overflow-hidden h-52 mb-6">
+            <img src={trip.cover_photo_url} alt={trip.name} className="w-full h-full object-cover" />
+          </div>
+        )}
+
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-[#0b1c30] font-['Montserrat'] mb-2">{trip.name}</h1>
+          <div className="flex items-center gap-4 text-sm text-[#94a3b8]">
+            <span className="flex items-center gap-1">
+              <Calendar className="w-4 h-4" />
+              {new Date(trip.start_date).toLocaleDateString()} → {new Date(trip.end_date).toLocaleDateString()}
+            </span>
+            <span className="flex items-center gap-1">
+              <Clock className="w-4 h-4" />
+              {duration} days
+            </span>
+            <span className="flex items-center gap-1">
+              <MapPin className="w-4 h-4" />
+              {stops.length} stops
             </span>
             <button 
               onClick={() => navigate('/login')}
@@ -97,50 +157,34 @@ export default function SharedItinerary() {
               <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4" /> {trip.startDate} to {trip.endDate}</span>
               <span className="flex items-center gap-1.5"><DollarSign className="w-4 h-4" /> Est. ₹{trip.budget}</span>
             </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content - Itinerary */}
-          <div className="lg:col-span-2 space-y-6">
-            <div className="card p-6">
-              <h2 className="text-lg font-bold text-[#0b1c30] font-heading mb-3">About this trip</h2>
-              <p className="text-[#64748B] text-sm leading-relaxed">
-                {trip.description}
-              </p>
-            </div>
-
-            <div className="space-y-6">
-              <h2 className="text-xl font-bold text-[#0b1c30] font-heading flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-[#E8604C]" />
-                Itinerary Overview
-              </h2>
-              
-              {itineraryDays.map((day) => (
-                <div key={day.day} className="card overflow-hidden">
-                  <div className="bg-[#f8fafc] border-b border-[#e2e8f0] p-4 flex justify-between items-center">
-                    <div>
-                      <h3 className="font-bold text-[#0b1c30] font-heading">Day {day.day}</h3>
-                      <p className="text-xs text-[#64748B]">{day.date} • {day.location}</p>
-                    </div>
                   </div>
-                  <div className="p-0">
-                    <div className="divide-y divide-[#f1f5f9]">
-                      {day.activities.map((activity, idx) => (
-                        <div key={idx} className="p-4 flex items-start gap-4 hover:bg-[#f8fafc] transition-colors">
-                          <div className="w-20 flex-shrink-0 text-right">
-                            <span className="text-xs font-semibold text-[#0b1c30]">{activity.time}</span>
-                          </div>
-                          <div className="w-2 h-2 rounded-full bg-[#E8604C] mt-1.5 flex-shrink-0" />
-                          <div>
-                            <p className="text-sm font-medium text-[#0b1c30]">{activity.title}</p>
-                            <span className="inline-block mt-1 px-2 py-0.5 rounded bg-[#f1f5f9] text-[10px] font-medium text-[#64748B] uppercase tracking-wider">
-                              {activity.type}
-                            </span>
-                          </div>
+                  <div>
+                    <p className="font-bold text-[#0b1c30]">
+                      {stop.city?.name || 'Unknown'}, {stop.city?.country || ''}
+                    </p>
+                    <p className="text-xs text-[#94a3b8] flex items-center gap-1 mt-0.5">
+                      <Calendar className="w-3 h-3" />
+                      {new Date(stop.arrival_date).toLocaleDateString()} → {new Date(stop.departure_date).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+                {stop.activities && stop.activities.length > 0 && (
+                  <div className="p-4 space-y-2">
+                    {stop.activities.map((sa) => (
+                      <div key={sa.id} className="flex items-center gap-3 py-2 border-b border-[#f8fafc] last:border-0">
+                        <div className="w-6 h-6 rounded-lg bg-[#E8604C]/10 flex items-center justify-center flex-shrink-0">
+                          <Clock className="w-3 h-3 text-[#E8604C]" />
                         </div>
-                      ))}
-                    </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-[#0b1c30]">{sa.activity?.name}</p>
+                          <p className="text-xs text-[#94a3b8]">
+                            {sa.activity?.type}
+                            {sa.scheduled_time && ` • ${sa.scheduled_time}`}
+                            {sa.activity?.cost && ` • $${Number(sa.activity.cost).toFixed(0)}`}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               ))}
@@ -193,8 +237,16 @@ export default function SharedItinerary() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* CTA */}
+        <div className="mt-10 text-center">
+          <p className="text-sm text-[#94a3b8] mb-3">Want to plan trips like this?</p>
+          <button onClick={() => navigate('/register')} className="btn-primary">
+            Create a Free Account
+          </button>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

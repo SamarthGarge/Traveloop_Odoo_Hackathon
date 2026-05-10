@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useStore } from '../store/useStore';
 import {
   Users,
   Wallet,
@@ -18,9 +19,27 @@ import {
   Trash2,
   Edit3,
 } from 'lucide-react';
+import { apiAdminStats, apiAdminUsers, apiAdminTrips, extractError } from '../lib/api';
+
+interface AdminStats {
+  total_users: number;
+  total_trips: number;
+  total_stops: number;
+  total_activities: number;
+  public_trips: number;
+  new_users_this_month: number;
+}
 
 export default function AdminPanel() {
   const navigate = useNavigate();
+  const { user } = useStore();
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [users, setUsers] = useState<any[]>([]);
+  const [trips, setTrips] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'trips'>('overview');
+  const [userSearch, setUserSearch] = useState('');
 
   const stats = [
     { label: 'TOTAL USERS', value: '124,502', change: '+12.5% this month', icon: Users, color: '#001b26', bg: 'white' },
@@ -70,23 +89,27 @@ export default function AdminPanel() {
           <h1 className="text-2xl lg:text-3xl font-bold text-[#0b1c30] font-heading">Overview</h1>
           <p className="text-[#64748B] text-sm mt-1">Welcome back, Admin. Here is today's summary.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <button className="w-9 h-9 rounded-xl bg-white border border-[#e2e8f0] flex items-center justify-center text-[#64748B] hover:bg-[#f1f5f9] transition-colors relative">
-            <Bell className="w-[18px] h-[18px]" />
-            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[#E8604C] rounded-full" />
-          </button>
-          <div className="w-9 h-9 rounded-full bg-[#001b26] flex items-center justify-center text-white text-xs font-bold">AD</div>
+        <div>
+          <h1 className="text-2xl font-bold text-[#0b1c30] font-['Montserrat']">Admin Panel</h1>
+          <p className="text-[#94a3b8] text-xs">Logged in as {user?.firstName} {user?.lastName}</p>
         </div>
       </div>
 
-      <div className="border-b border-[#e2e8f0] mb-8" />
+      {error && (
+        <div className="mb-4 p-3 rounded-xl bg-[#fef2f2] text-[#dc2626] text-sm border border-[#dc2626]/10">{error}</div>
+      )}
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        {stats.map((stat) => (
-          <div
-            key={stat.label}
-            className={`card p-5 ${stat.bg === '#E8604C' ? 'bg-[#E8604C] border-[#E8604C]' : ''}`}
+      {/* Tabs */}
+      <div className="flex gap-2 mb-6 border-b border-[#e2e8f0] pb-0">
+        {(['overview', 'users', 'trips'] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`pb-3 px-1 text-sm font-medium capitalize border-b-2 transition-colors mr-4 ${
+              activeTab === tab
+                ? 'border-[#E8604C] text-[#E8604C]'
+                : 'border-transparent text-[#94a3b8] hover:text-[#0b1c30]'
+            }`}
           >
             <div className="flex items-start justify-between mb-3">
               <p className={`text-[10px] font-semibold tracking-widest uppercase ${
@@ -134,7 +157,7 @@ export default function AdminPanel() {
                     }}
                   />
                 </div>
-                <span className="text-xs text-[#94a3b8]">{d.month}</span>
+                <span className="text-sm text-[#94a3b8]">{filteredUsers.length} users</span>
               </div>
             ))}
           </div>
@@ -238,16 +261,51 @@ export default function AdminPanel() {
                     <p className="text-sm font-semibold text-[#0b1c30]">{log.title}</p>
                     <span className="text-xs text-[#94a3b8] flex-shrink-0">{log.time}</span>
                   </div>
-                  <p className="text-xs text-[#94a3b8] mt-0.5">{log.desc}</p>
-                </div>
+                ))}
+                {filteredUsers.length === 0 && (
+                  <p className="text-center py-8 text-[#94a3b8] text-sm">No users found.</p>
+                )}
               </div>
-            ))}
-          </div>
-          <button className="w-full mt-4 py-2.5 rounded-xl bg-[#f1f5f9] text-sm font-medium text-[#64748B] hover:bg-[#e2e8f0] hover:text-[#0b1c30] transition-all">
-            View Full Logs
-          </button>
-        </div>
-      </div>
+            </div>
+          )}
+
+          {/* Trips Tab */}
+          {activeTab === 'trips' && (
+            <div>
+              <p className="text-sm text-[#94a3b8] mb-4">{trips.length} total trips</p>
+              <div className="card divide-y divide-[#f8fafc]">
+                {trips.map((t) => (
+                  <div key={t.id} className="flex items-center gap-4 p-4 hover:bg-[#f8fafc] transition-colors">
+                    <div className="w-9 h-9 rounded-xl bg-[#f1f5f9] flex items-center justify-center flex-shrink-0">
+                      <Map className="w-4 h-4 text-[#94a3b8]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-[#0b1c30] truncate">{t.name}</p>
+                      <p className="text-xs text-[#94a3b8]">
+                        by {t.user?.first_name} {t.user?.last_name} • {new Date(t.start_date).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {t.is_public && (
+                        <span className="badge bg-green-50 text-green-600 text-[10px]">Public</span>
+                      )}
+                      <button
+                        onClick={() => navigate(`/trips/${t.id}/view`)}
+                        className="w-7 h-7 flex items-center justify-center rounded-lg border border-[#e2e8f0] text-[#94a3b8] hover:bg-[#f1f5f9] transition-colors"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {trips.length === 0 && (
+                  <p className="text-center py-8 text-[#94a3b8] text-sm">No trips found.</p>
+                )}
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

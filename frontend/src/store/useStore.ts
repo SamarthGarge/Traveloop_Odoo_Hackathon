@@ -1,7 +1,14 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import {
+  apiLogin,
+  apiRegister,
+  apiGetProfile,
+  extractError,
+} from '../lib/api';
 
-export interface User {
+// ── Types ────────────────────────────────────────────────────
+export interface AppUser {
   id: string;
   firstName: string;
   lastName: string;
@@ -126,106 +133,32 @@ interface AppState {
 
   // UI
   isAdmin: boolean;
+  createdAt: string;
 }
 
-const seedTrips: Trip[] = [
-  {
-    id: '1',
-    name: 'Paris & Rome Adventure',
-    destination: 'Paris, Rome',
-    startDate: '2025-06-10',
-    endDate: '2025-06-20',
-    description: 'A romantic European getaway exploring the best of Paris and Rome.',
-    coverImage: '/images/dest-paris.jpg',
-    status: 'upcoming',
-    budget: 8000,
-    spent: 3200,
-    createdBy: 'James Wilson',
-    sections: [
-      { id: 's1', title: 'Paris Stay', description: 'Hotel near Eiffel Tower, Seine river cruise, Louvre Museum visit', dateRange: 'Jun 10 - Jun 14', budget: 3500 },
-      { id: 's2', title: 'Travel to Rome', description: 'Flight from Paris to Rome, train station transfers', dateRange: 'Jun 14 - Jun 15', budget: 800 },
-      { id: 's3', title: 'Rome Stay', description: 'Colosseum tour, Vatican visit, Italian cooking class', dateRange: 'Jun 15 - Jun 20', budget: 3700 },
-    ],
-    notes: [
-      { id: 'n1', title: 'Hotel check-in details - Paris', content: 'Check in after 2pm, Room 302, Breakfast included (7-10am)', date: '2025-06-10', stop: 'Paris' },
-      { id: 'n2', title: 'Museum bookings', content: 'Louvre tickets booked for June 12 at 10am. Skip-the-line access.', date: '2025-06-11', stop: 'Paris' },
-    ],
-  },
-  {
-    id: '2',
-    name: 'Tokyo Explorer',
-    destination: 'Tokyo, Kyoto, Osaka',
-    startDate: '2025-04-01',
-    endDate: '2025-04-12',
-    description: 'Cherry blossom season adventure through Japan.',
-    coverImage: '/images/dest-tokyo.jpg',
-    status: 'completed',
-    budget: 12000,
-    spent: 11500,
-    createdBy: 'James Wilson',
-    sections: [
-      { id: 's4', title: 'Tokyo Experience', description: 'Shibuya crossing, Meiji Shrine, Tsukiji Market, Akihabara', dateRange: 'Apr 1 - Apr 5', budget: 4500 },
-      { id: 's5', title: 'Kyoto Temples', description: 'Fushimi Inari, Kinkaku-ji, Arashiyama bamboo grove', dateRange: 'Apr 5 - Apr 9', budget: 4000 },
-      { id: 's6', title: 'Osaka Food Tour', description: 'Dotonbori street food, Osaka Castle, Universal Studios', dateRange: 'Apr 9 - Apr 12', budget: 3000 },
-    ],
-    notes: [
-      { id: 'n3', title: 'JR Pass info', content: '7-day JR Pass activated on April 1. Keep passport handy.', date: '2025-04-01', stop: 'Tokyo' },
-    ],
-  },
-  {
-    id: '3',
-    name: 'Iceland Northern Lights',
-    destination: 'Reykjavik, Iceland',
-    startDate: '2025-02-15',
-    endDate: '2025-02-22',
-    description: 'Chasing auroras and exploring glaciers.',
-    coverImage: '/images/dest-iceland.jpg',
-    status: 'completed',
-    budget: 6000,
-    spent: 5800,
-    createdBy: 'James Wilson',
-    sections: [
-      { id: 's7', title: 'Golden Circle Tour', description: 'Thingvellir, Geysir, Gullfoss waterfall', dateRange: 'Feb 15 - Feb 18', budget: 2500 },
-      { id: 's8', title: 'South Coast Adventure', description: 'Black sand beaches, Skogafoss, glacier hiking', dateRange: 'Feb 18 - Feb 22', budget: 3300 },
-    ],
-    notes: [],
-  },
-  {
-    id: '4',
-    name: 'Bali Retreat',
-    destination: 'Ubud, Bali',
-    startDate: '2025-09-01',
-    endDate: '2025-09-10',
-    description: 'Wellness and cultural immersion in Bali.',
-    coverImage: '/images/dest-bali.jpg',
-    status: 'ongoing',
-    budget: 4000,
-    spent: 1800,
-    createdBy: 'James Wilson',
-    sections: [
-      { id: 's9', title: 'Ubud Wellness', description: 'Yoga retreat, rice terrace walks, Monkey Forest', dateRange: 'Sep 1 - Sep 5', budget: 2000 },
-      { id: 's10', title: 'Beach Days', description: 'Seminyak beach clubs, surfing lessons, sunset dinners', dateRange: 'Sep 5 - Sep 10', budget: 2000 },
-    ],
-    notes: [
-      { id: 'n4', title: 'Yoga schedule', content: 'Daily yoga at 7am. Don\'t forget to bring own mat.', date: '2025-09-01', stop: 'Ubud' },
-    ],
-  },
-];
+export interface ApiTrip {
+  id: string;
+  name: string;
+  description?: string;
+  start_date: string;
+  end_date: string;
+  cover_photo_url?: string;
+  is_public: boolean;
+  share_token: string;
+  total_budget?: number;
+  created_at: string;
+  stops?: ApiStop[];
+}
 
-const seedChecklist: ChecklistItem[] = [
-  { id: 'c1', name: 'Passport', packed: true, category: 'Documents' },
-  { id: 'c2', name: 'Flight Tickets (printed)', packed: true, category: 'Documents' },
-  { id: 'c3', name: 'Travel Insurance', packed: true, category: 'Documents' },
-  { id: 'c4', name: 'Hotel Booking Confirmation', packed: false, category: 'Documents' },
-  { id: 'c5', name: 'Casual Shirts', packed: false, category: 'Clothing' },
-  { id: 'c6', name: 'Trousers / Jeans', packed: true, category: 'Clothing' },
-  { id: 'c7', name: 'Comfortable Walking Shoes', packed: false, category: 'Clothing' },
-  { id: 'c8', name: 'Light Jacket / Windbreaker', packed: false, category: 'Clothing' },
-  { id: 'c9', name: 'Phone Charger', packed: true, category: 'Electronics' },
-  { id: 'c10', name: 'Universal Power Adapter', packed: false, category: 'Electronics' },
-  { id: 'c11', name: 'Earphones / Headphones', packed: false, category: 'Electronics' },
-  { id: 'c12', name: 'Camera + Memory Cards', packed: false, category: 'Electronics' },
-];
+export interface ApiStop {
+  id: string;
+  city_id: string;
+  arrival_date: string;
+  departure_date: string;
+  order_index: number;
+  city?: ApiCity;
+  activities?: ApiStopActivity[];
+}
 
 const seedCommunityPosts: CommunityPost[] = [
   { id: 'p1', author: 'Sarah Chen', avatar: '/images/user-avatar.jpg', title: 'Hidden gems in Kyoto', content: 'Found this amazing tea house near Kiyomizu-dera that no one talks about...', destination: 'Kyoto, Japan', likes: 24, date: '2025-01-15' },
@@ -292,38 +225,31 @@ export const useStore = create<AppState>()(
         return true;
       },
 
-      updateProfile: (data) => {
-        const { user } = get();
-        if (user) {
-          set({ user: { ...user, ...data } });
+      logout: () => {
+        localStorage.removeItem('traveloop_token');
+        set({ token: null, user: null, isLoggedIn: false, isAdmin: false, activeTrip: null });
+      },
+
+      refreshUser: async () => {
+        try {
+          const res = await apiGetProfile();
+          const data = res.data ?? res;
+          const user = mapUser(data);
+          set({ user, isAdmin: user.isAdmin });
+        } catch {
+          // silently fail
         }
       },
 
-      // Trips
-      trips: seedTrips,
-      activeTrip: seedTrips[0],
-
-      createTrip: (trip) => {
-        const newTrip: Trip = {
-          ...trip,
-          id: Date.now().toString(),
-          sections: [],
-          notes: [],
-        };
-        set({ trips: [...get().trips, newTrip], activeTrip: newTrip });
-      },
-
-      updateTrip: (id, data) => {
-        set({
-          trips: get().trips.map((t) => (t.id === id ? { ...t, ...data } : t)),
-        });
-      },
-
-      deleteTrip: (id) => {
-        set({ trips: get().trips.filter((t) => t.id !== id) });
+      updateUser: (updates) => {
+        const prev = get().user;
+        if (!prev) return;
+        const updated = { ...prev, ...updates };
+        set({ user: updated, isAdmin: updated.isAdmin });
       },
 
       setActiveTrip: (trip) => set({ activeTrip: trip }),
+<<<<<<< HEAD
 
       // Checklist
       checklist: seedChecklist,
@@ -468,16 +394,25 @@ export const useStore = create<AppState>()(
             : get().activeTrip
         });
       },
+=======
+>>>>>>> 95bb846bc93e0e8cc3c54ccdd99f9a02281f01d7
     }),
     {
-      name: 'traveloop-storage',
+      name: 'traveloop-auth',
+      // Only persist auth state + activeTrip for sidebar links
       partialize: (state) => ({
+        token: state.token,
         user: state.user,
         isLoggedIn: state.isLoggedIn,
-        trips: state.trips,
-        checklist: state.checklist,
-        communityPosts: state.communityPosts,
+        isAdmin: state.isAdmin,
+        activeTrip: state.activeTrip,
       }),
+      onRehydrateStorage: () => (state) => {
+        // Sync localStorage token with persisted state
+        if (state?.token) {
+          localStorage.setItem('traveloop_token', state.token);
+        }
+      },
     }
   )
 );

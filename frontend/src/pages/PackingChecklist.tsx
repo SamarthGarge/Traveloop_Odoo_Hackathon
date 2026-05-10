@@ -1,31 +1,38 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useStore } from '../store/useStore';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import type { ApiPackingItem } from '../store/useStore';
 import {
-  Check,
-  Plus,
-  RotateCcw,
-  Share2,
-  Search,
-  ChevronDown,
-  ChevronUp,
-  FileText,
-  Shirt,
-  Smartphone,
-  Droplets,
-  AlertTriangle,
-  ToggleLeft,
-  ToggleRight,
+  ArrowLeft, Plus, Trash2, RotateCcw, Check, Loader2,
+  Shirt, FileText, Cpu, Droplets, Backpack, MoreHorizontal,
 } from 'lucide-react';
+import {
+  apiListPacking, apiCreatePackingItem, apiUpdatePackingItem,
+  apiDeletePackingItem, apiResetPacking, extractError,
+} from '../lib/api';
 
-const categoryIcons: Record<string, React.ElementType> = {
-  Documents: FileText,
-  Clothing: Shirt,
-  Electronics: Smartphone,
-  Toiletries: Droplets,
+const CATEGORIES = ['clothing', 'documents', 'electronics', 'toiletries', 'gear', 'other'] as const;
+type Category = typeof CATEGORIES[number];
+
+const CATEGORY_ICONS: Record<Category, typeof Shirt> = {
+  clothing: Shirt,
+  documents: FileText,
+  electronics: Cpu,
+  toiletries: Droplets,
+  gear: Backpack,
+  other: MoreHorizontal,
+};
+
+const CATEGORY_COLORS: Record<Category, string> = {
+  clothing: 'bg-blue-50 text-blue-600',
+  documents: 'bg-amber-50 text-amber-600',
+  electronics: 'bg-purple-50 text-purple-600',
+  toiletries: 'bg-teal-50 text-teal-600',
+  gear: 'bg-green-50 text-green-600',
+  other: 'bg-gray-50 text-gray-500',
 };
 
 export default function PackingChecklist() {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { checklist, toggleChecklistItem, addChecklistItem, resetChecklist, activeTrip, trips, setActiveTrip } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
@@ -39,72 +46,20 @@ export default function PackingChecklist() {
     Electronics: true,
     Toiletries: true,
   });
-
-  const categories = [...new Set(checklist.map((item) => item.category))];
-
-  const toggleCategory = (cat: string) => {
-    setExpandedCategories((prev) => ({ ...prev, [cat]: !prev[cat] }));
-  };
-
-  const handleAddItem = () => {
-    if (!newItem.trim()) return;
-    addChecklistItem({ name: newItem, packed: false, category: newCategory });
-    setNewItem('');
-    setShowAdd(false);
-  };
-
-  const packedCount = checklist.filter((i) => i.packed).length;
-  const totalCount = checklist.length;
-  const progress = totalCount ? Math.round((packedCount / totalCount) * 100) : 0;
-
-  return (
-    <div className="page-transition max-w-4xl">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <span className="badge badge-primary text-[10px] uppercase">
-              {activeTrip?.destination || 'No Destination'}
-            </span>
-            <span className="badge bg-[#f1f5f9] text-[#64748B] text-[10px] uppercase">
-              {activeTrip ? `${activeTrip.startDate} - ${activeTrip.endDate}` : 'No Dates'}
-            </span>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-2xl lg:text-3xl font-bold text-[#0b1c30] font-heading whitespace-nowrap">Packing For:</h1>
-            <select
-              value={activeTrip?.id || ''}
-              onChange={(e) => {
-                const trip = trips.find((t) => t.id === e.target.value);
-                if (trip) setActiveTrip(trip);
-              }}
-              className="text-xl lg:text-2xl font-bold text-[#E8604C] font-heading bg-transparent border-b-2 border-transparent hover:border-[#E8604C]/30 focus:border-[#E8604C] outline-none cursor-pointer pb-1 pr-8 appearance-none max-w-full"
-              style={{ background: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23e8604c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") no-repeat right center` }}
-            >
-              <option value="" disabled>Select a trip</option>
-              {trips.map((trip) => (
-                <option key={trip.id} value={trip.id} className="text-base font-medium text-[#0b1c30]">
-                  {trip.name}
-                </option>
-              ))}
-            </select>
-          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-sm text-[#64748B]">
-            <span className="font-medium">Shared Checklist</span>
-            <button onClick={() => setSharedMode(!sharedMode)} className="text-[#E8604C]">
-              {sharedMode ? <ToggleRight className="w-8 h-5" /> : <ToggleLeft className="w-8 h-5" />}
-            </button>
-          </div>
-          <div className="flex -space-x-2">
-            <div className="w-8 h-8 rounded-full bg-[#E8604C] border-2 border-white flex items-center justify-center text-white text-xs font-bold">JS</div>
-            <div className="w-8 h-8 rounded-full bg-[#001b26] border-2 border-white flex items-center justify-center text-white text-xs font-bold">AL</div>
-          </div>
-        </div>
+        <button
+          onClick={handleReset}
+          disabled={resetting || packed === 0}
+          className="btn-secondary text-sm py-2 disabled:opacity-40"
+        >
+          {resetting ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
+          Reset
+        </button>
       </div>
 
-      <div className="border-b border-[#e2e8f0] mb-8" />
+      {error && (
+        <div className="mb-4 p-3 rounded-xl bg-[#fef2f2] text-[#dc2626] text-sm border border-[#dc2626]/10">{error}</div>
+      )}
 
       {/* Full-Width Destination Banner */}
       {activeTrip && (
@@ -167,15 +122,57 @@ export default function PackingChecklist() {
             );
             if (items.length === 0) return null;
 
-            const catPacked = items.filter((i) => i.packed).length;
-            const isExpanded = expandedCategories[category] !== false;
-            const CatIcon = categoryIcons[category] || FileText;
+      {/* Category Filters */}
+      <div className="flex gap-2 overflow-x-auto pb-2 mb-5">
+        <button
+          onClick={() => setActiveCategory('all')}
+          className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
+            activeCategory === 'all' ? 'bg-[#001b26] text-white' : 'bg-white border border-[#e2e8f0] text-[#64748B] hover:bg-[#f1f5f9]'
+          }`}
+        >
+          All ({items.length})
+        </button>
+        {CATEGORIES.map((cat) => {
+          const Icon = CATEGORY_ICONS[cat];
+          const count = items.filter((i) => i.category === cat).length;
+          return (
+            <button
+              key={cat}
+              onClick={() => setActiveCategory(cat)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
+                activeCategory === cat ? 'bg-[#001b26] text-white' : 'bg-white border border-[#e2e8f0] text-[#64748B] hover:bg-[#f1f5f9]'
+              }`}
+            >
+              <Icon className="w-3 h-3" />
+              {cat.charAt(0).toUpperCase() + cat.slice(1)} ({count})
+            </button>
+          );
+        })}
+      </div>
 
+      {/* Items */}
+      {loading ? (
+        <div className="card p-8 text-center">
+          <Loader2 className="w-6 h-6 animate-spin text-[#E8604C] mx-auto" />
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="card p-8 text-center">
+          <Backpack className="w-10 h-10 text-[#e2e8f0] mx-auto mb-2" />
+          <p className="text-[#94a3b8] text-sm">No items in this category. Add some above!</p>
+        </div>
+      ) : (
+        <div className="card divide-y divide-[#f8fafc]">
+          {filtered.map((item) => {
+            const cat = item.category as Category;
+            const Icon = CATEGORY_ICONS[cat] ?? MoreHorizontal;
+            const colorClass = CATEGORY_COLORS[cat] ?? CATEGORY_COLORS.other;
             return (
-              <div key={category} className="card overflow-hidden">
+              <div key={item.id} className={`flex items-center gap-4 px-5 py-3.5 transition-colors ${item.is_packed ? 'bg-[#f8fafc]' : 'bg-white hover:bg-[#fafafa]'}`}>
                 <button
-                  onClick={() => toggleCategory(category)}
-                  className="w-full flex items-center justify-between p-4 hover:bg-[#f8fafc] transition-colors"
+                  onClick={() => handleToggle(item)}
+                  className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                    item.is_packed ? 'bg-[#E8604C] border-[#E8604C] text-white' : 'border-[#e2e8f0] hover:border-[#E8604C]'
+                  }`}
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-[#f1f5f9] flex items-center justify-center text-[#64748B]">

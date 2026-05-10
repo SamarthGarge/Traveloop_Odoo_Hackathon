@@ -89,7 +89,7 @@ export default function Layout() {
           <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[#E8604C] rounded-full" />
         </button>
         <button onClick={() => navigate('/profile')} className="w-8 h-8 rounded-full overflow-hidden border-2 border-[#e2e8f0] hover:border-[#E8604C] transition-colors">
-          <img src={user?.photo || '/images/user-avatar.jpg'} alt="Profile" className="w-full h-full object-cover" />
+          <img src={user?.photoUrl || '/images/user-avatar.jpg'} alt="Profile" className="w-full h-full object-cover" />
         </button>
       </header>
 

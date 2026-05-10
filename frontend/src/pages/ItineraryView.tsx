@@ -17,10 +17,31 @@ import {
   Check,
   X,
 } from 'lucide-react';
+import { apiGetTrip, apiGetBudget, apiToggleShare, extractError } from '../lib/api';
 
-const COLORS = ['#001b26', '#E8604C', '#059669', '#d97706', '#6366f1', '#94a3b8'];
+// ── sub-tab components ─────────────────────────────────────────
+import PackingChecklist from './PackingChecklist';
+import TripNotes from './TripNotes';
+import ExpenseInvoice from './ExpenseInvoice';
+
+interface BudgetData {
+  total_budget?: number;
+  estimated_cost: number;
+  breakdown?: { category: string; amount: number }[];
+  over_budget: boolean;
+}
+
+type Tab = 'itinerary' | 'packing' | 'notes' | 'budget';
+
+const TABS: { key: Tab; label: string; icon: typeof List }[] = [
+  { key: 'itinerary', label: 'Itinerary', icon: List },
+  { key: 'packing',   label: 'Packing',   icon: Package },
+  { key: 'notes',     label: 'Notes',     icon: StickyNote },
+  { key: 'budget',    label: 'Budget',    icon: BarChart2 },
+];
 
 export default function ItineraryView() {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { activeTrip, createTrip } = useStore();
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
@@ -54,26 +75,111 @@ export default function ItineraryView() {
     navigate('/itinerary/build');
   };
 
-  if (!activeTrip) {
+  // Derive active tab from URL so sidebar links also work
+  const tabFromUrl: Tab = (() => {
+    if (location.pathname.endsWith('/packing')) return 'packing';
+    if (location.pathname.endsWith('/notes'))   return 'notes';
+    if (location.pathname.endsWith('/budget'))  return 'budget';
+    return 'itinerary';
+  })();
+
+  const [activeTab, setActiveTab] = useState<Tab>(tabFromUrl);
+  const [trip, setTrip] = useState<ApiTrip | null>(null);
+  const [budget, setBudget] = useState<BudgetData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [sharingLoading, setSharingLoading] = useState(false);
+  const [shareSuccess, setShareSuccess] = useState(false);
+  const [error, setError] = useState('');
+
+  // Switch tab when URL changes (sidebar navigation)
+  useEffect(() => {
+    setActiveTab(tabFromUrl);
+  }, [location.pathname]);
+
+  // Fetch trip (critical)
+  useEffect(() => {
+    if (!id) return;
+    setLoading(true);
+    apiGetTrip(id)
+      .then((res) => {
+        const t = res?.data ?? res;
+        setTrip(t);
+      })
+      .catch((err) => setError(extractError(err)))
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  // Fetch budget separately (non-critical — won't crash page if it fails)
+  useEffect(() => {
+    if (!id) return;
+    apiGetBudget(id)
+      .then((res) => setBudget(res?.data ?? res))
+      .catch(() => setBudget(null)); // silently ignore budget errors
+  }, [id]);
+
+  const handleShare = async () => {
+    if (!id || !trip) return;
+    setSharingLoading(true);
+    try {
+      const res = await apiToggleShare(id, !trip.is_public);
+      const updated = res?.data ?? res;
+      setTrip((prev) => prev ? { ...prev, is_public: updated.is_public, share_token: updated.share_token } : prev);
+      if (updated.is_public && updated.share_token) {
+        const url = `${window.location.origin}/shared/${updated.share_token}`;
+        await navigator.clipboard.writeText(url).catch(() => {});
+        setShareSuccess(true);
+        setTimeout(() => setShareSuccess(false), 3000);
+      }
+    } catch (err) {
+      setError(extractError(err));
+    } finally {
+      setSharingLoading(false);
+    }
+  };
+
+  const handleTabChange = (tab: Tab) => {
+    setActiveTab(tab);
+    // Update URL to match so sidebar also shows correct active state
+    if (tab === 'itinerary') navigate(`/trips/${id}/view`, { replace: true });
+    else navigate(`/trips/${id}/${tab}`, { replace: true });
+  };
+
+  const getTripDuration = () => {
+    if (!trip) return 0;
+    return Math.ceil(
+      (new Date(trip.end_date).getTime() - new Date(trip.start_date).getTime()) /
+      (1000 * 60 * 60 * 24)
+    );
+  };
+
+  if (loading) {
     return (
-      <div className="page-transition flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <p className="text-[#64748B] mb-4">No trip selected</p>
-          <button onClick={() => navigate('/trips')} className="btn-primary">
-            View My Trips
-          </button>
-        </div>
+      <div className="page-transition flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-[#E8604C]" />
       </div>
     );
   }
 
-  const remaining = activeTrip.budget - activeTrip.spent;
-  const budgetData = activeTrip.sections.map((s, i) => ({
-    name: s.title,
-    value: s.budget,
-    color: COLORS[i % COLORS.length],
-    percent: Math.round((s.budget / activeTrip.budget) * 100),
-  }));
+  if (error && !trip) {
+    return (
+      <div className="page-transition text-center py-20">
+        <p className="text-[#dc2626] mb-4">{error}</p>
+        <button onClick={() => navigate('/trips')} className="btn-primary">Back to Trips</button>
+      </div>
+    );
+  }
+
+  if (!trip) {
+    return (
+      <div className="page-transition text-center py-20">
+        <MapPin className="w-12 h-12 text-[#e2e8f0] mx-auto mb-3" />
+        <p className="text-[#94a3b8] mb-4">Trip not found.</p>
+        <button onClick={() => navigate('/trips')} className="btn-primary">Back to Trips</button>
+      </div>
+    );
+  }
+
+  const stops = (trip.stops ?? []).slice().sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
 
   return (
     <div className="page-transition">
@@ -116,6 +222,24 @@ export default function ItineraryView() {
             <Receipt className="w-3.5 h-3.5" /> View Invoice
           </button>
         </div>
+        <button
+          onClick={() => navigate(`/trips/${id}/build`)}
+          className="btn-secondary text-sm py-2 flex-shrink-0"
+        >
+          <Pencil className="w-4 h-4" /> Edit
+        </button>
+        <button
+          onClick={handleShare}
+          disabled={sharingLoading}
+          className={`text-sm py-2 px-4 rounded-xl font-medium flex items-center gap-2 transition-all flex-shrink-0 ${
+            shareSuccess
+              ? 'bg-[#ecfdf5] text-[#059669] border border-[#059669]/20'
+              : 'btn-primary'
+          }`}
+        >
+          {sharingLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : shareSuccess ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
+          <span className="hidden sm:inline">{shareSuccess ? 'Link Copied!' : trip.is_public ? 'Sharing' : 'Share'}</span>
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -212,8 +336,8 @@ export default function ItineraryView() {
           )}
         </div>
 
-        {/* Budget Sidebar */}
-        <div className="space-y-6">
+        {/* Budget snapshot */}
+        {budget && (
           <div className="card p-5">
             <h3 className="font-bold text-[#0b1c30] font-heading mb-4">Budget Breakdown</h3>
             
@@ -275,20 +399,19 @@ export default function ItineraryView() {
                   ₹{remaining.toLocaleString()}
                 </span>
               </div>
-              <div className="mt-2">
-                <div className="h-2 bg-[#f1f5f9] rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-[#001b26] rounded-full transition-all duration-700"
-                    style={{ width: `${Math.min((activeTrip.spent / activeTrip.budget) * 100, 100)}%` }}
-                  />
-                </div>
-                <p className="text-xs text-[#94a3b8] mt-1">
-                  {Math.round((activeTrip.spent / activeTrip.budget) * 100)}% of budget used
-                </p>
-              </div>
+              {budget.over_budget && (
+                <p className="text-xs text-[#dc2626] bg-[#fef2f2] rounded-lg px-2 py-1.5">⚠ Over budget</p>
+              )}
             </div>
           </div>
-        </div>
+        )}
+
+        {trip.is_public && trip.share_token && (
+          <div className="card p-4 border-[#E8604C]/20 border">
+            <p className="text-xs font-semibold text-[#E8604C] mb-1">Public Share Link</p>
+            <p className="text-xs text-[#64748B] break-all">{window.location.origin}/shared/{trip.share_token}</p>
+          </div>
+        )}
       </div>
 
       {/* Share Modal */}
@@ -353,6 +476,45 @@ export default function ItineraryView() {
               Done
             </button>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StopCard({ stop, index }: { stop: ApiStop; index: number }) {
+  return (
+    <div className="card overflow-hidden">
+      <div className="flex items-center gap-3 p-4 border-b border-[#f1f5f9]">
+        <div className="w-8 h-8 rounded-full bg-[#E8604C] flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+          {index + 1}
+        </div>
+        <div>
+          <p className="font-bold text-[#0b1c30]">
+            {stop.city?.name ?? 'Unknown City'}, {stop.city?.country ?? ''}
+          </p>
+          <p className="text-xs text-[#94a3b8] flex items-center gap-1 mt-0.5">
+            <Calendar className="w-3 h-3" />
+            {new Date(stop.arrival_date).toLocaleDateString()} → {new Date(stop.departure_date).toLocaleDateString()}
+          </p>
+        </div>
+      </div>
+      {stop.activities && stop.activities.length > 0 && (
+        <div className="p-4 space-y-2">
+          {stop.activities.map((sa) => (
+            <div key={sa.id} className="flex items-center gap-3 p-2.5 bg-[#f8fafc] rounded-xl">
+              <div className="w-7 h-7 rounded-lg bg-[#E8604C]/10 flex items-center justify-center flex-shrink-0">
+                <Clock className="w-3.5 h-3.5 text-[#E8604C]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-[#0b1c30] truncate">{sa.activity?.name ?? 'Activity'}</p>
+                <p className="text-xs text-[#94a3b8]">
+                  {sa.activity?.type ?? ''}
+                  {sa.activity?.cost != null ? ` · $${Number(sa.custom_cost ?? sa.activity.cost).toFixed(0)}` : ''}
+                </p>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

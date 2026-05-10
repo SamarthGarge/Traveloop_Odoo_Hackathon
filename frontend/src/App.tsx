@@ -58,27 +58,42 @@ export default function App() {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        {/* Auth Routes */}
+        {/* Public / Auth Routes */}
         <Route path="/login" element={<AnimatedPage><Login /></AnimatedPage>} />
         <Route path="/register" element={<AnimatedPage><Register /></AnimatedPage>} />
         <Route path="/forgot-password" element={<AnimatedPage><ForgotPassword /></AnimatedPage>} />
-        <Route path="/shared/:id?" element={<AnimatedPage><SharedItinerary /></AnimatedPage>} />
+        <Route path="/shared/:token" element={<AnimatedPage><SharedItinerary /></AnimatedPage>} />
 
         {/* Main App Routes */}
         <Route element={<Layout />}>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+          {/* Dashboard */}
           <Route path="/dashboard" element={<PrivateRoute><AnimatedPage><Dashboard /></AnimatedPage></PrivateRoute>} />
+
+          {/* Trips */}
           <Route path="/trips" element={<PrivateRoute><AnimatedPage><TripListing /></AnimatedPage></PrivateRoute>} />
           <Route path="/trips/new" element={<PrivateRoute><AnimatedPage><CreateTrip /></AnimatedPage></PrivateRoute>} />
-          <Route path="/itinerary/build" element={<PrivateRoute><AnimatedPage><BuildItinerary /></AnimatedPage></PrivateRoute>} />
-          <Route path="/itinerary/view" element={<PrivateRoute><AnimatedPage><ItineraryView /></AnimatedPage></PrivateRoute>} />
+
+          {/* Trip-scoped routes */}
+          <Route path="/trips/:id/view" element={<PrivateRoute><AnimatedPage><ItineraryView /></AnimatedPage></PrivateRoute>} />
+          <Route path="/trips/:id/build" element={<PrivateRoute><AnimatedPage><BuildItinerary /></AnimatedPage></PrivateRoute>} />
+          <Route path="/trips/:id/packing" element={<PrivateRoute><AnimatedPage><PackingChecklist /></AnimatedPage></PrivateRoute>} />
+          <Route path="/trips/:id/notes" element={<PrivateRoute><AnimatedPage><TripNotes /></AnimatedPage></PrivateRoute>} />
+          <Route path="/trips/:id/budget" element={<PrivateRoute><AnimatedPage><ExpenseInvoice /></AnimatedPage></PrivateRoute>} />
+
+          {/* Legacy flat routes → redirect to trips list */}
+          <Route path="/itinerary/view" element={<Navigate to="/trips" replace />} />
+          <Route path="/itinerary/build" element={<Navigate to="/trips" replace />} />
+          <Route path="/packing" element={<Navigate to="/trips" replace />} />
+          <Route path="/notes" element={<Navigate to="/trips" replace />} />
+          <Route path="/invoice" element={<Navigate to="/trips" replace />} />
+
+          {/* Other */}
           <Route path="/profile" element={<PrivateRoute><AnimatedPage><UserProfile /></AnimatedPage></PrivateRoute>} />
           <Route path="/search-cities" element={<PrivateRoute><AnimatedPage><CitySearch /></AnimatedPage></PrivateRoute>} />
           <Route path="/search" element={<PrivateRoute><AnimatedPage><ActivitySearch /></AnimatedPage></PrivateRoute>} />
           <Route path="/community" element={<PrivateRoute><AnimatedPage><Community /></AnimatedPage></PrivateRoute>} />
-          <Route path="/packing" element={<PrivateRoute><AnimatedPage><PackingChecklist /></AnimatedPage></PrivateRoute>} />
-          <Route path="/notes" element={<PrivateRoute><AnimatedPage><TripNotes /></AnimatedPage></PrivateRoute>} />
-          <Route path="/invoice" element={<PrivateRoute><AnimatedPage><ExpenseInvoice /></AnimatedPage></PrivateRoute>} />
           <Route path="/admin" element={<AdminRoute><AnimatedPage><AdminPanel /></AnimatedPage></AdminRoute>} />
         </Route>
       </Routes>

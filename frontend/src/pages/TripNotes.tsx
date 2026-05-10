@@ -137,10 +137,15 @@ export default function TripNotes() {
   const handleArchive = (noteId: string, tripId: string, current: boolean) =>
     updateNote(tripId, noteId, { archived: !current });
 
-  const reminders = [
-    { text: 'Buy tickets for the Bamboo Grove train in advance.', done: false },
-    { text: 'Pack extra battery pack for photos.', done: true },
-  ];
+  const fetchNotes = () => {
+    if (!id) return;
+    setLoading(true);
+    apiListNotes(id)
+      .then((res) => setNotes((res.data ?? res) as ApiNote[]))
+      .catch((err) => setError(extractError(err)))
+      .finally(() => setLoading(false));
+  };
+  useEffect(() => { fetchNotes(); }, [id]);
 
   const photos = ['/images/dest-tokyo.jpg', '/images/image.png', '/images/dest-osaka.jpg'];
 
@@ -194,6 +199,7 @@ export default function TripNotes() {
             <button onClick={() => setFilter('archived')} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filter === 'archived' ? 'bg-[#64748B] text-white' : 'bg-[#f1f5f9] text-[#64748B] hover:bg-[#e2e8f0]'}`}>Archived</button>
           </div>
         </div>
+      </div>
 
         <div className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar">
           {filteredNotes.length === 0 ? (
@@ -378,7 +384,63 @@ export default function TripNotes() {
           </p>
           <button className="text-xs font-semibold text-[#E8604C] hover:text-[#d95543]">Generate summary</button>
         </div>
-      </div>
+      )}
+    </div>
+  );
+}
+
+function NoteCard({
+  note, editingId, editContent, setEditContent,
+  startEdit, handleSaveEdit, cancelEdit, handleDelete,
+}: {
+  note: ApiNote;
+  editingId: string | null;
+  editContent: string;
+  setEditContent: (v: string) => void;
+  startEdit: (n: ApiNote) => void;
+  handleSaveEdit: () => void;
+  cancelEdit: () => void;
+  handleDelete: (id: string) => void;
+}) {
+  const isEditing = editingId === note.id;
+  return (
+    <div className="card p-4 group">
+      {isEditing ? (
+        <>
+          <textarea
+            rows={3}
+            value={editContent}
+            onChange={(e) => setEditContent(e.target.value)}
+            className="input-field resize-none text-sm w-full"
+            autoFocus
+          />
+          <div className="flex justify-end gap-2 mt-2">
+            <button onClick={cancelEdit} className="btn-secondary text-xs py-1.5 px-3">
+              <X className="w-3.5 h-3.5" /> Cancel
+            </button>
+            <button onClick={handleSaveEdit} disabled={!editContent.trim()} className="btn-primary text-xs py-1.5 px-3 disabled:opacity-50">
+              <Check className="w-3.5 h-3.5" /> Save
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <p className="text-sm text-[#334155] whitespace-pre-wrap leading-relaxed">{note.content}</p>
+          <div className="flex items-center justify-between mt-3">
+            <p className="text-xs text-[#94a3b8]">
+              {new Date(note.updated_at).toLocaleDateString()} {new Date(note.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </p>
+            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button onClick={() => startEdit(note)} className="w-7 h-7 flex items-center justify-center rounded-lg text-[#94a3b8] hover:text-[#0b1c30] hover:bg-[#f1f5f9] transition-colors">
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
+              <button onClick={() => handleDelete(note.id)} className="w-7 h-7 flex items-center justify-center rounded-lg text-[#94a3b8] hover:text-[#dc2626] hover:bg-[#fef2f2] transition-colors">
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

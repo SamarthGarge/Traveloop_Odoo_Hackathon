@@ -21,24 +21,32 @@ import {
 export default function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout, isAdmin } = useStore();
+  const { user, logout, isAdmin, activeTrip } = useStore();
+  // Extract trip ID from URL first (e.g. /trips/uuid/build), fall back to in-memory activeTrip
+  const tripIdFromUrl = location.pathname.match(/\/trips\/([0-9a-f-]{36})/i)?.[1];
+  const tripId = tripIdFromUrl || activeTrip?.id;
 
   const mainNav = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/trips', label: 'My Trips', icon: Compass },
-    { path: '/itinerary/build', label: 'Itinerary', icon: Calendar },
+    { path: tripId ? `/trips/${tripId}/build` : '/trips', label: 'Itinerary', icon: Calendar },
     { path: '/search-cities', label: 'Cities', icon: Globe },
     { path: '/search', label: 'Activities', icon: Search },
     { path: '/community', label: 'Community', icon: Users },
   ];
 
+  const noTrip = !tripId;
   const toolsNav = [
-    { path: '/packing', label: 'Packing', icon: ClipboardList },
-    { path: '/notes', label: 'Notes', icon: StickyNote },
-    { path: '/invoice', label: 'Invoice', icon: Receipt },
+    { path: tripId ? `/trips/${tripId}/packing` : null, label: 'Packing', icon: ClipboardList },
+    { path: tripId ? `/trips/${tripId}/notes` : null, label: 'Notes', icon: StickyNote },
+    { path: tripId ? `/trips/${tripId}/budget` : null, label: 'Budget', icon: Receipt },
   ];
 
-  const isActive = (path: string) => location.pathname === path;
+  // /trips should only be active when exactly on /trips, not on /trips/:id/** sub-routes
+  const isActive = (path: string) => {
+    if (path === '/trips') return location.pathname === '/trips';
+    return location.pathname === path || location.pathname.startsWith(path + '/');
+  };
 
   return (
     <>
@@ -89,17 +97,29 @@ export default function Sidebar() {
           {/* Tools Section */}
           <div className="mt-7 mb-2">
             <span className="section-label">Tools</span>
+            {noTrip && (
+              <p className="text-[10px] text-[#94a3b8] px-3 mb-2 leading-snug">
+                Select a trip to use tools
+              </p>
+            )}
             <div className="space-y-0.5">
               {toolsNav.map((item) => {
-                const active = isActive(item.path);
+                const dest = item.path ?? '/trips';
+                const active = !!item.path && isActive(item.path);
                 return (
                   <Link
-                    key={item.path}
-                    to={item.path}
-                    className={`nav-item ${active ? 'active' : ''}`}
+                    key={item.label}
+                    to={dest}
+                    title={!item.path ? 'Select a trip first' : item.label}
+                    className={`nav-item ${active ? 'active' : ''} ${!item.path ? 'opacity-50' : ''}`}
                   >
                     <item.icon className="w-[18px] h-[18px] flex-shrink-0" />
                     {item.label}
+                    {!item.path && (
+                      <span className="ml-auto text-[9px] bg-[#f1f5f9] text-[#94a3b8] px-1.5 py-0.5 rounded-full">
+                        pick trip
+                      </span>
+                    )}
                   </Link>
                 );
               })}
@@ -152,7 +172,7 @@ export default function Sidebar() {
             <Bell className="w-[18px] h-[18px]" />
           </button>
           <Link to="/profile" className="w-8 h-8 rounded-full overflow-hidden border-2 border-[#e2e8f0]">
-            <img src={user?.photo || '/images/user-avatar.jpg'} alt="Profile" className="w-full h-full object-cover" />
+            <img src={user?.photoUrl || '/images/user-avatar.jpg'} alt="Profile" className="w-full h-full object-cover" />
           </Link>
         </div>
       </header>
