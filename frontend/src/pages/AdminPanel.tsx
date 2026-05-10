@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Users,
@@ -14,6 +15,8 @@ import {
   Landmark,
   Mountain,
   Compass,
+  Trash2,
+  Edit3,
 } from 'lucide-react';
 
 export default function AdminPanel() {
@@ -21,7 +24,7 @@ export default function AdminPanel() {
 
   const stats = [
     { label: 'TOTAL USERS', value: '124,502', change: '+12.5% this month', icon: Users, color: '#001b26', bg: 'white' },
-    { label: 'AVG TRIP BUDGET', value: '$3,450', change: '+4.2% vs last year', icon: Wallet, color: '#001b26', bg: 'white' },
+    { label: 'AVG TRIP BUDGET', value: '₹3,450', change: '+4.2% vs last year', icon: Wallet, color: '#001b26', bg: 'white' },
     { label: 'ACTIVE TRIPS NOW', value: '1,893', sub: 'Across 42 countries', icon: Globe, color: 'white', bg: '#E8604C' },
   ];
 
@@ -41,11 +44,17 @@ export default function AdminPanel() {
     { name: 'Amalfi Coast, Italy', bookings: '2,890', icon: Compass },
   ];
 
-  const recentUsers = [
-    { name: 'Jane Smith', role: 'Traveler', status: 'Active' },
-    { name: 'Mike Johnson', role: 'Concierge Agent', status: 'Active' },
-    { name: 'Anna Lee', role: 'Traveler', status: 'Pending' },
-  ];
+  const [recentUsers, setRecentUsers] = useState([
+    { id: 1, name: 'Jane Smith', role: 'Traveler', status: 'Active' },
+    { id: 2, name: 'Mike Johnson', role: 'Concierge Agent', status: 'Active' },
+    { id: 3, name: 'Anna Lee', role: 'Traveler', status: 'Pending' },
+  ]);
+
+  const handleDeleteUser = (id: number) => {
+    if (confirm('Are you sure you want to delete this user?')) {
+      setRecentUsers(recentUsers.filter(u => u.id !== id));
+    }
+  };
 
   const logs = [
     { title: 'API Rate Limit Warning', desc: 'Flight data API approaching 90% of daily quota.', time: '10:42 AM', severity: 'error' },
@@ -58,7 +67,7 @@ export default function AdminPanel() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-[#0b1c30] font-['Montserrat']">Overview</h1>
+          <h1 className="text-2xl lg:text-3xl font-bold text-[#0b1c30] font-heading">Overview</h1>
           <p className="text-[#64748B] text-sm mt-1">Welcome back, Admin. Here is today's summary.</p>
         </div>
         <div className="flex items-center gap-3">
@@ -87,7 +96,7 @@ export default function AdminPanel() {
               </p>
               <stat.icon className={`w-5 h-5 ${stat.bg === '#E8604C' ? 'text-white/60' : 'text-[#94a3b8]'}`} />
             </div>
-            <p className={`text-3xl font-bold font-['Montserrat'] ${
+            <p className={`text-3xl font-bold font-heading ${
               stat.bg === '#E8604C' ? 'text-white' : 'text-[#0b1c30]'
             }`}>
               {stat.value}
@@ -110,7 +119,7 @@ export default function AdminPanel() {
         {/* Chart */}
         <div className="lg:col-span-2 card p-6">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-bold text-[#0b1c30] font-['Montserrat']">User Registration Trends</h3>
+            <h3 className="text-lg font-bold text-[#0b1c30] font-heading">User Registration Trends</h3>
             <button className="badge bg-[#f1f5f9] text-[#64748B]">Last 6 Months</button>
           </div>
           <div className="flex items-end justify-between h-52 gap-3">
@@ -134,7 +143,7 @@ export default function AdminPanel() {
         {/* Top Destinations */}
         <div className="card p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-[#0b1c30] font-['Montserrat']">Top Destinations</h3>
+            <h3 className="text-lg font-bold text-[#0b1c30] font-heading">Top Destinations</h3>
             <button className="text-xs text-[#64748B] hover:text-[#0b1c30]">View All</button>
           </div>
           <div className="space-y-4">
@@ -158,7 +167,7 @@ export default function AdminPanel() {
         {/* Recent Users */}
         <div className="card p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-[#0b1c30] font-['Montserrat']">Recent User Registrations</h3>
+            <h3 className="text-lg font-bold text-[#0b1c30] font-heading">Recent User Registrations</h3>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#94a3b8]" />
               <input placeholder="Search users..." className="input-field text-xs pl-8 py-2 w-36" />
@@ -170,11 +179,12 @@ export default function AdminPanel() {
                 <th className="text-left pb-3 text-[10px] font-semibold tracking-widest text-[#94a3b8] uppercase">User</th>
                 <th className="text-left pb-3 text-[10px] font-semibold tracking-widest text-[#94a3b8] uppercase">Role</th>
                 <th className="text-left pb-3 text-[10px] font-semibold tracking-widest text-[#94a3b8] uppercase">Status</th>
+                <th className="text-right pb-3 text-[10px] font-semibold tracking-widest text-[#94a3b8] uppercase">Action</th>
               </tr>
             </thead>
             <tbody>
               {recentUsers.map((u) => (
-                <tr key={u.name} className="border-b border-[#f1f5f9] last:border-0">
+                <tr key={u.id} className="border-b border-[#f1f5f9] last:border-0">
                   <td className="py-3">
                     <div className="flex items-center gap-2.5">
                       <div className="w-8 h-8 rounded-full bg-[#E8604C]/10 flex items-center justify-center text-[#E8604C] text-xs font-bold">
@@ -192,6 +202,17 @@ export default function AdminPanel() {
                       {u.status}
                     </span>
                   </td>
+                  <td className="py-3 text-right">
+                    <button className="text-[#94a3b8] hover:text-[#0b1c30] mr-3 transition-colors">
+                      <Edit3 className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteUser(u.id)}
+                      className="text-[#94a3b8] hover:text-[#dc2626] transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -201,7 +222,7 @@ export default function AdminPanel() {
         {/* System Logs */}
         <div className="card p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-[#0b1c30] font-['Montserrat']">System Logs</h3>
+            <h3 className="text-lg font-bold text-[#0b1c30] font-heading">System Logs</h3>
             <button className="text-[#94a3b8] hover:text-[#64748B]">
               <MoreVertical className="w-5 h-5" />
             </button>

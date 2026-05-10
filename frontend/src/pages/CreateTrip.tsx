@@ -64,6 +64,7 @@ export default function CreateTrip() {
     startDate: '',
     endDate: '',
     description: '',
+    coverImage: '',
   });
   
   const [selectedCountry, setSelectedCountry] = useState<{ value: string; label: string } | null>(null);
@@ -71,6 +72,7 @@ export default function CreateTrip() {
   const [selectedPlace, setSelectedPlace] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [step, setStep] = useState(1);
+  const [dateError, setDateError] = useState('');
 
   const countryOptions = useMemo(() => 
     Country.getAllCountries().map((c) => ({
@@ -101,7 +103,7 @@ export default function CreateTrip() {
       startDate: form.startDate,
       endDate: form.endDate,
       description: form.description,
-      coverImage: dest?.image || '/images/dest-paris.jpg',
+      coverImage: form.coverImage || dest?.image || '/images/dest-paris.jpg',
       status: 'upcoming',
       budget: 5000,
       spent: 0,
@@ -152,15 +154,30 @@ export default function CreateTrip() {
             {step === 1 && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-xl font-bold text-[#0b1c30] font-['Montserrat'] mb-1">Name your trip</h2>
+                  <h2 className="text-xl font-bold text-[#0b1c30] font-heading mb-1">Name your trip</h2>
                   <p className="text-[#64748B] text-sm">Give your adventure a memorable name</p>
                 </div>
 
                 {/* Cover Photo Upload */}
-                <div className="border-2 border-dashed border-[#e2e8f0] rounded-2xl p-8 text-center hover:border-[#E8604C]/40 transition-colors cursor-pointer">
-                  <Camera className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-                  <p className="text-sm text-gray-500">Upload a cover photo</p>
-                  <p className="text-xs text-gray-400 mt-1">Optional</p>
+                <div className="relative border-2 border-dashed border-[#e2e8f0] rounded-2xl text-center hover:border-[#E8604C]/40 transition-colors cursor-pointer overflow-hidden">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleChange('coverImage', URL.createObjectURL(file));
+                    }}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                  />
+                  {form.coverImage ? (
+                    <img src={form.coverImage} alt="Cover Preview" className="w-full h-40 object-cover" />
+                  ) : (
+                    <div className="p-8">
+                      <Camera className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                      <p className="text-sm text-gray-500">Upload a cover photo</p>
+                      <p className="text-xs text-gray-400 mt-1">Optional</p>
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -201,7 +218,7 @@ export default function CreateTrip() {
             {step === 2 && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-xl font-bold text-[#0b1c30] font-['Montserrat'] mb-1">When and where?</h2>
+                  <h2 className="text-xl font-bold text-[#0b1c30] font-heading mb-1">When and where?</h2>
                   <p className="text-[#64748B] text-sm">Set your travel dates and destination</p>
                 </div>
 
@@ -257,7 +274,14 @@ export default function CreateTrip() {
                       type="date"
                       value={form.startDate}
                       min={today}
-                      onChange={(e) => handleChange('startDate', e.target.value)}
+                      onChange={(e) => {
+                        handleChange('startDate', e.target.value);
+                        if (form.endDate && e.target.value >= form.endDate) {
+                          setDateError('End date must be after the start date.');
+                        } else {
+                          setDateError('');
+                        }
+                      }}
                       className="input-field"
                     />
                   </div>
@@ -270,9 +294,25 @@ export default function CreateTrip() {
                       type="date"
                       value={form.endDate}
                       min={form.startDate || today}
-                      onChange={(e) => handleChange('endDate', e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (form.startDate && val && val <= form.startDate) {
+                          setDateError('End date must be after the start date.');
+                        } else {
+                          setDateError('');
+                        }
+                        handleChange('endDate', val);
+                      }}
                       className="input-field"
                     />
+                    {dateError && (
+                      <p className="text-xs text-[#dc2626] mt-1.5 flex items-center gap-1">
+                        <svg className="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/>
+                        </svg>
+                        {dateError}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -283,7 +323,7 @@ export default function CreateTrip() {
                   </button>
                   <button
                     onClick={() => { setStep(3); setShowSuggestions(true); }}
-                    disabled={!form.destination || !form.startDate || !form.endDate}
+                    disabled={!form.destination || !form.startDate || !form.endDate || !!dateError}
                     className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Continue
@@ -296,7 +336,7 @@ export default function CreateTrip() {
             {step === 3 && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-xl font-bold text-[#0b1c30] font-['Montserrat'] mb-1">Suggested Activities</h2>
+                  <h2 className="text-xl font-bold text-[#0b1c30] font-heading mb-1">Suggested Activities</h2>
                   <p className="text-[#64748B] text-sm">
                     Popular activities in {selectedPlace || form.destination || 'your destination'}
                   </p>

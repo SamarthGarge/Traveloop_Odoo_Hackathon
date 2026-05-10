@@ -11,6 +11,7 @@ export interface User {
   country: string;
   photo: string;
   bio: string;
+  language?: string;
 }
 
 export interface ItinerarySection {
@@ -19,6 +20,8 @@ export interface ItinerarySection {
   description: string;
   dateRange: string;
   budget: number;
+  city?: string;
+  activities?: string[];
 }
 
 export interface Note {
@@ -27,6 +30,23 @@ export interface Note {
   content: string;
   date: string;
   stop: string;
+  time?: string;
+  tags?: string[];
+  mood?: string;
+  location?: string;
+  photos?: string[];
+  favorite?: boolean;
+  archived?: boolean;
+  updatedAt?: string;
+}
+
+export interface ExpenseItem {
+  id: string;
+  category: string;
+  title: string;
+  description: string;
+  qty: string;
+  amount: number;
 }
 
 export interface Trip {
@@ -43,6 +63,7 @@ export interface Trip {
   sections: ItinerarySection[];
   notes: Note[];
   createdBy: string;
+  expenses?: ExpenseItem[];
 }
 
 export interface ChecklistItem {
@@ -93,7 +114,15 @@ interface AppState {
 
   // Notes
   addNote: (tripId: string, note: Omit<Note, 'id'>) => void;
+  updateNote: (tripId: string, noteId: string, data: Partial<Note>) => void;
   deleteNote: (tripId: string, noteId: string) => void;
+
+  // Finance
+  updateTripBudget: (tripId: string, budget: number) => void;
+  updateSectionBudget: (tripId: string, sectionId: string, budget: number) => void;
+  addExpense: (tripId: string, expense: Omit<ExpenseItem, 'id'>) => void;
+  updateExpense: (tripId: string, expenseId: string, data: Partial<ExpenseItem>) => void;
+  deleteExpense: (tripId: string, expenseId: string) => void;
 
   // UI
   isAdmin: boolean;
@@ -202,9 +231,14 @@ const seedCommunityPosts: CommunityPost[] = [
   { id: 'p1', author: 'Sarah Chen', avatar: '/images/user-avatar.jpg', title: 'Hidden gems in Kyoto', content: 'Found this amazing tea house near Kiyomizu-dera that no one talks about...', destination: 'Kyoto, Japan', likes: 24, date: '2025-01-15' },
   { id: 'p2', author: 'Marco Rossi', avatar: '/images/user-avatar.jpg', title: 'Best pasta in Rome', content: 'Skip the tourist traps and head to Trastevere for authentic carbonara...', destination: 'Rome, Italy', likes: 42, date: '2025-02-20' },
   { id: 'p3', author: 'Emma Watson', avatar: '/images/user-avatar.jpg', title: 'Northern Lights photography tips', content: 'Use ISO 1600+, f/2.8, 15-20s exposure. Best spots away from Reykjavik...', destination: 'Iceland', likes: 67, date: '2025-03-01' },
-  { id: 'p4', author: 'James Park', avatar: '/images/user-avatar.jpg', title: 'Budget travel in Southeast Asia', content: 'How I spent 3 months traveling Thailand, Vietnam, and Bali for under $2000...', destination: 'Southeast Asia', likes: 89, date: '2025-03-10' },
+  { id: 'p4', author: 'James Park', avatar: '/images/user-avatar.jpg', title: 'Budget travel in Southeast Asia', content: 'How I spent 3 months traveling Thailand, Vietnam, and Bali for under ₹2000...', destination: 'Southeast Asia', likes: 89, date: '2025-03-10' },
   { id: 'p5', author: 'Lisa Mueller', avatar: '/images/user-avatar.jpg', title: 'Swiss Alps hiking guide', content: 'The best trails for beginners and advanced hikers in the Jungfrau region...', destination: 'Swiss Alps', likes: 35, date: '2025-03-25' },
 ];
+
+// ─── Admin Credentials ─────────────────────────────────────────────────────
+export const ADMIN_EMAIL = 'admin@traveloop.com';
+export const ADMIN_PASSWORD = 'Admin@1234';
+// ─────────────────────────────────────────────────────────────────────────────
 
 export const useStore = create<AppState>()(
   persist(
@@ -221,12 +255,30 @@ export const useStore = create<AppState>()(
         photo: '/images/user-avatar.jpg',
         bio: 'Passionate traveler exploring the world one city at a time.',
       },
-      isLoggedIn: true,
-      isAdmin: true,
+      isLoggedIn: false,
+      isAdmin: false,
 
       login: (email: string, password: string) => {
         if (email && password) {
-          set({ isLoggedIn: true });
+          // Check if it's the admin account
+          const adminLogin = email.toLowerCase() === ADMIN_EMAIL && password === ADMIN_PASSWORD;
+          const adminUser = adminLogin ? {
+            id: 'admin-1',
+            firstName: 'Admin',
+            lastName: 'Traveloop',
+            email: ADMIN_EMAIL,
+            phone: '+91 98765 43210',
+            city: 'Mumbai',
+            country: 'India',
+            photo: '/images/user-avatar.jpg',
+            bio: 'Platform administrator.',
+          } : undefined;
+
+          set({
+            isLoggedIn: true,
+            isAdmin: adminLogin,
+            ...(adminUser ? { user: adminUser } : {}),
+          });
           return true;
         }
         return false;
@@ -236,7 +288,7 @@ export const useStore = create<AppState>()(
 
       register: (data) => {
         const newUser: User = { ...data, id: Date.now().toString() };
-        set({ user: newUser, isLoggedIn: true });
+        set({ user: newUser, isLoggedIn: true, isAdmin: false });
         return true;
       },
 
@@ -324,26 +376,96 @@ export const useStore = create<AppState>()(
       },
 
       // Notes
-      addNote: (tripId, note) => {
-        const newNote: Note = { ...note, id: Date.now().toString() };
+  addNote: (tripId, note) => {
+    const newNote: Note = { ...note, id: Date.now().toString(), updatedAt: new Date().toISOString() };
+    set({
+      trips: get().trips.map((t) =>
+        t.id === tripId ? { ...t, notes: [...t.notes, newNote] } : t
+      ),
+      activeTrip: get().activeTrip?.id === tripId
+        ? { ...get().activeTrip!, notes: [...get().activeTrip!.notes, newNote] }
+        : get().activeTrip,
+    });
+  },
+
+  updateNote: (tripId, noteId, data) => {
+    set({
+      trips: get().trips.map((t) =>
+        t.id === tripId
+          ? { ...t, notes: t.notes.map((n) => n.id === noteId ? { ...n, ...data, updatedAt: new Date().toISOString() } : n) }
+          : t
+      ),
+      activeTrip: get().activeTrip?.id === tripId
+        ? { ...get().activeTrip!, notes: get().activeTrip!.notes.map((n) => n.id === noteId ? { ...n, ...data, updatedAt: new Date().toISOString() } : n) }
+        : get().activeTrip,
+    });
+  },
+
+  deleteNote: (tripId, noteId) => {
+    set({
+      trips: get().trips.map((t) =>
+        t.id === tripId ? { ...t, notes: t.notes.filter((n) => n.id !== noteId) } : t
+      ),
+      activeTrip: get().activeTrip?.id === tripId
+        ? { ...get().activeTrip!, notes: get().activeTrip!.notes.filter((n) => n.id !== noteId) }
+        : get().activeTrip,
+    });
+  },
+
+      // Finance
+      updateTripBudget: (tripId, budget) => {
         set({
-          trips: get().trips.map((t) =>
-            t.id === tripId ? { ...t, notes: [...t.notes, newNote] } : t
-          ),
-          activeTrip: get().activeTrip?.id === tripId
-            ? { ...get().activeTrip!, notes: [...get().activeTrip!.notes, newNote] }
-            : get().activeTrip,
+          trips: get().trips.map(t => t.id === tripId ? { ...t, budget } : t),
+          activeTrip: get().activeTrip?.id === tripId ? { ...get().activeTrip!, budget } : get().activeTrip
         });
       },
 
-      deleteNote: (tripId, noteId) => {
+      updateSectionBudget: (tripId, sectionId, budget) => {
         set({
-          trips: get().trips.map((t) =>
-            t.id === tripId ? { ...t, notes: t.notes.filter((n) => n.id !== noteId) } : t
+          trips: get().trips.map(t => 
+            t.id === tripId 
+              ? { ...t, sections: t.sections.map(s => s.id === sectionId ? { ...s, budget } : s) } 
+              : t
           ),
           activeTrip: get().activeTrip?.id === tripId
-            ? { ...get().activeTrip!, notes: get().activeTrip!.notes.filter((n) => n.id !== noteId) }
-            : get().activeTrip,
+            ? { ...get().activeTrip!, sections: get().activeTrip!.sections.map(s => s.id === sectionId ? { ...s, budget } : s) }
+            : get().activeTrip
+        });
+      },
+
+      addExpense: (tripId, expense) => {
+        const newExpense: ExpenseItem = { ...expense, id: Date.now().toString() };
+        set({
+          trips: get().trips.map(t => 
+            t.id === tripId ? { ...t, expenses: [...(t.expenses || []), newExpense] } : t
+          ),
+          activeTrip: get().activeTrip?.id === tripId
+            ? { ...get().activeTrip!, expenses: [...(get().activeTrip!.expenses || []), newExpense] }
+            : get().activeTrip
+        });
+      },
+
+      updateExpense: (tripId, expenseId, data) => {
+        set({
+          trips: get().trips.map(t => 
+            t.id === tripId 
+              ? { ...t, expenses: (t.expenses || []).map(e => e.id === expenseId ? { ...e, ...data } : e) } 
+              : t
+          ),
+          activeTrip: get().activeTrip?.id === tripId
+            ? { ...get().activeTrip!, expenses: (get().activeTrip!.expenses || []).map(e => e.id === expenseId ? { ...e, ...data } : e) }
+            : get().activeTrip
+        });
+      },
+
+      deleteExpense: (tripId, expenseId) => {
+        set({
+          trips: get().trips.map(t => 
+            t.id === tripId ? { ...t, expenses: (t.expenses || []).filter(e => e.id !== expenseId) } : t
+          ),
+          activeTrip: get().activeTrip?.id === tripId
+            ? { ...get().activeTrip!, expenses: (get().activeTrip!.expenses || []).filter(e => e.id !== expenseId) }
+            : get().activeTrip
         });
       },
     }),

@@ -65,11 +65,15 @@ export default function Register() {
     country: '',
     password: '',
     confirmPassword: '',
+    photo: '',
+    bio: '',
+    termsAccepted: false,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [generalError, setGeneralError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const [selectedCountry, setSelectedCountry] = useState<{ value: string; label: string } | null>(null);
   const [selectedCity, setSelectedCity] = useState<{ value: string; label: string } | null>(null);
@@ -90,15 +94,46 @@ export default function Register() {
       : [],
   [selectedCountry]);
 
-  const handleChange = (field: string, value: string) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors((prev) => {
-        const newErrs = { ...prev };
-        delete newErrs[field];
-        return newErrs;
-      });
+  const validateField = (field: string, value: any) => {
+    let error = '';
+    switch (field) {
+      case 'firstName': if (!value.trim()) error = 'First name is required'; break;
+      case 'lastName': if (!value.trim()) error = 'Last name is required'; break;
+      case 'email': 
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(value)) error = 'Valid email is required'; 
+        break;
+      case 'phone': 
+        if (!value || !isValidPhoneNumber(value)) error = 'Valid phone number is required'; 
+        break;
+      case 'city': if (!value.trim()) error = 'City is required'; break;
+      case 'country': if (!value.trim()) error = 'Country is required'; break;
+      case 'password': 
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+        if (!passwordRegex.test(value)) error = 'Must be 8+ chars: 1 uppercase, 1 lowercase, 1 number, 1 special char'; 
+        break;
+      case 'confirmPassword': 
+        if (value !== form.password) error = 'Passwords do not match'; 
+        break;
+      case 'termsAccepted':
+        if (!value) error = 'You must accept the terms and conditions';
+        break;
     }
+    return error;
+  };
+
+  const handleChange = (field: string, value: any) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+    const error = validateField(field, value);
+    setErrors((prev) => {
+      const newErrs = { ...prev };
+      if (error) {
+        newErrs[field] = error;
+      } else {
+        delete newErrs[field];
+      }
+      return newErrs;
+    });
   };
 
   const validate = () => {
@@ -125,11 +160,15 @@ export default function Register() {
       newErrors.confirmPassword = 'Passwords do not match';
     }
 
+    if (!form.termsAccepted) {
+      newErrors.termsAccepted = 'You must accept the terms and conditions';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setGeneralError('');
     
@@ -138,6 +177,9 @@ export default function Register() {
       return;
     }
     
+    setIsLoading(true);
+    await new Promise((res) => setTimeout(res, 800));
+    
     register({
       firstName: form.firstName,
       lastName: form.lastName,
@@ -145,9 +187,11 @@ export default function Register() {
       phone: form.phone,
       city: form.city,
       country: form.country,
-      photo: '',
-      bio: '',
+      photo: form.photo,
+      bio: form.bio,
     });
+    
+    setIsLoading(false);
     navigate('/dashboard');
   };
 
@@ -311,9 +355,64 @@ export default function Register() {
             </div>
           </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div>
+              <label className="block text-[10px] font-bold tracking-widest uppercase text-gray-500 mb-2">Profile Photo (Optional)</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                   const file = e.target.files?.[0];
+                   if (file) handleChange('photo', URL.createObjectURL(file));
+                }}
+                className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-[#b83a26] file:text-white hover:file:bg-[#a03220] transition-all cursor-pointer"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold tracking-widest uppercase text-gray-500 mb-2">Additional Information</label>
+              <textarea
+                value={form.bio}
+                onChange={(e) => handleChange('bio', e.target.value)}
+                placeholder="Tell us about your travel style..."
+                rows={2}
+                className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#b83a26] focus:border-transparent outline-none text-sm bg-white text-gray-900 transition-all shadow-sm resize-none"
+              />
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="terms"
+                checked={form.termsAccepted}
+                onChange={(e) => handleChange('termsAccepted', e.target.checked)}
+                className="w-4 h-4 text-[#b83a26] border-gray-300 rounded focus:ring-[#b83a26]"
+              />
+              <label htmlFor="terms" className="text-xs text-gray-600">
+                I agree to the <a href="#" className="text-[#b83a26] hover:underline">Terms & Conditions</a> and Privacy Policy.
+              </label>
+            </div>
+            {errors.termsAccepted && <p className="text-red-500 text-[10px] mt-1">{errors.termsAccepted}</p>}
+          </div>
+
           <div className="pt-2">
-            <button type="submit" className="w-full bg-[#b83a26] hover:bg-[#a03220] text-white py-3.5 rounded-xl font-medium flex items-center justify-center transition-all shadow-md">
-              Create Account
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-[#b83a26] hover:bg-[#a03220] disabled:opacity-60 disabled:cursor-not-allowed text-white py-3.5 rounded-xl font-medium flex items-center justify-center transition-all shadow-md"
+            >
+              {isLoading ? (
+                <>
+                  <svg className="animate-spin w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+                  </svg>
+                  Creating account...
+                </>
+              ) : (
+                'Create Account'
+              )}
             </button>
           </div>
         </form>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useStore } from '../store/useStore';
+import { useStore, ADMIN_EMAIL, ADMIN_PASSWORD } from '../store/useStore';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import PhoneInput, { isValidPhoneNumber } from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
@@ -12,9 +12,34 @@ export default function Login() {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<{ identifier?: string; password?: string }>({});
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const validateField = (field: string, val: string, method: 'email' | 'phone') => {
+    let err = '';
+    if (field === 'identifier') {
+      if (!val) err = method === 'email' ? 'Email is required' : 'Phone number is required';
+      else if (method === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) err = 'Invalid email format';
+      else if (method === 'phone' && !isValidPhoneNumber(val)) err = 'Invalid phone number';
+    } else if (field === 'password') {
+      if (!val) err = 'Password is required';
+      else if (val.length < 8) err = 'Password must be at least 8 characters';
+    }
+    return err;
+  };
+
+  const handleIdentifierChange = (val: string) => {
+    setIdentifier(val);
+    setFieldErrors(prev => ({ ...prev, identifier: validateField('identifier', val, loginMethod) }));
+  };
+
+  const handlePasswordChange = (val: string) => {
+    setPassword(val);
+    setFieldErrors(prev => ({ ...prev, password: validateField('password', val, loginMethod) }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!identifier || !password) {
       setError('Please fill in all fields');
@@ -26,7 +51,12 @@ export default function Login() {
       return;
     }
     
+    setIsLoading(true);
+    // Simulate async auth (replace with real API call when backend is wired)
+    await new Promise((res) => setTimeout(res, 800));
     const success = login(identifier, password);
+    setIsLoading(false);
+    
     if (success) {
       navigate('/dashboard');
     } else {
@@ -43,21 +73,21 @@ export default function Login() {
       
       <div className="w-full max-w-md bg-white rounded-2xl p-10 relative z-10 shadow-xl">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-[#0b1c30] tracking-tight mb-1 font-['Montserrat']">Traveloop</h1>
+          <h1 className="text-2xl font-bold text-[#0b1c30] tracking-tight mb-1 font-heading">Traveloop</h1>
           <p className="text-[#94a3b8] text-sm">Your journey begins here.</p>
         </div>
 
         <div className="flex p-1 bg-[#f1f5f9] rounded-xl mb-6">
           <button
             type="button"
-            onClick={() => { setLoginMethod('email'); setIdentifier(''); setError(''); }}
+            onClick={() => { setLoginMethod('email'); setIdentifier(''); setError(''); setFieldErrors({}); }}
             className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${loginMethod === 'email' ? 'bg-white text-[#0b1c30] shadow-sm' : 'text-[#94a3b8] hover:text-[#64748B]'}`}
           >
             Email
           </button>
           <button
             type="button"
-            onClick={() => { setLoginMethod('phone'); setIdentifier(''); setError(''); }}
+            onClick={() => { setLoginMethod('phone'); setIdentifier(''); setError(''); setFieldErrors({}); }}
             className={`flex-1 py-2 text-sm font-semibold rounded-lg transition-colors ${loginMethod === 'phone' ? 'bg-white text-[#0b1c30] shadow-sm' : 'text-[#94a3b8] hover:text-[#64748B]'}`}
           >
             Phone
@@ -79,11 +109,12 @@ export default function Login() {
                 <input
                   type="email"
                   value={identifier}
-                  onChange={(e) => setIdentifier(e.target.value)}
+                  onChange={(e) => handleIdentifierChange(e.target.value)}
                   placeholder="voyager@traveloop.com"
-                  className="input-field pl-11"
+                  className={`input-field pl-11 ${fieldErrors.identifier ? 'border-red-500 focus:ring-red-500/20' : ''}`}
                 />
               </div>
+              {fieldErrors.identifier && <p className="text-red-500 text-[10px] mt-1">{fieldErrors.identifier}</p>}
             </div>
           ) : (
             <div>
@@ -92,8 +123,10 @@ export default function Login() {
                 international
                 defaultCountry="US"
                 value={identifier}
-                onChange={(val) => setIdentifier(val || '')}
+                onChange={(val) => handleIdentifierChange(val || '')}
+                className={fieldErrors.identifier ? 'PhoneInput--error' : ''}
               />
+              {fieldErrors.identifier && <p className="text-red-500 text-[10px] mt-1">{fieldErrors.identifier}</p>}
             </div>
           )}
 
@@ -109,9 +142,9 @@ export default function Login() {
               <input
                 type={showPassword ? "text" : "password"}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => handlePasswordChange(e.target.value)}
                 placeholder="••••••••"
-                className="input-field pl-11 pr-12"
+                className={`input-field pl-11 pr-12 ${fieldErrors.password ? 'border-red-500 focus:ring-red-500/20' : ''}`}
               />
               <button
                 type="button"
@@ -121,10 +154,25 @@ export default function Login() {
                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
             </div>
+            {fieldErrors.password && <p className="text-red-500 text-[10px] mt-1">{fieldErrors.password}</p>}
           </div>
 
-          <button type="submit" className="w-full bg-[#E8604C] hover:bg-[#ae311e] text-white py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center transition-all shadow-sm hover:shadow-md">
-            Sign In
+          <button
+            type="submit"
+            disabled={!identifier || !password || isLoading || !!fieldErrors.identifier || !!fieldErrors.password}
+            className="w-full bg-[#E8604C] hover:bg-[#ae311e] disabled:opacity-60 disabled:cursor-not-allowed text-white py-3.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all shadow-sm hover:shadow-md"
+          >
+            {isLoading ? (
+              <>
+                <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+                </svg>
+                Signing in...
+              </>
+            ) : (
+              'Sign In'
+            )}
           </button>
         </form>
 
@@ -159,6 +207,17 @@ export default function Login() {
               Create Account
             </Link>
           </p>
+        </div>
+        {/* Admin hint panel */}
+        <div className="mt-6 p-3 rounded-xl bg-[#f1f5f9] border border-[#e2e8f0]">
+          <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-widest mb-2 flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-[#E8604C] inline-block" />
+            Admin Access
+          </p>
+          <div className="space-y-1">
+            <p className="text-xs text-[#64748B]"><span className="font-semibold text-[#0b1c30]">Email:</span> {ADMIN_EMAIL}</p>
+            <p className="text-xs text-[#64748B]"><span className="font-semibold text-[#0b1c30]">Password:</span> {ADMIN_PASSWORD}</p>
+          </div>
         </div>
       </div>
     </div>

@@ -56,9 +56,9 @@ export default function SharedItinerary() {
         <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-[#001b26] flex items-center justify-center">
-              <span className="text-white font-bold font-['Montserrat']">T</span>
+              <span className="text-white font-bold font-heading">T</span>
             </div>
-            <span className="font-bold text-[#0b1c30] font-['Montserrat'] tracking-tight">Traveloop</span>
+            <span className="font-bold text-[#0b1c30] font-heading tracking-tight">Traveloop</span>
           </div>
           <div className="flex items-center gap-3">
             <span className="hidden md:inline-block text-xs text-[#64748B]">
@@ -89,13 +89,13 @@ export default function SharedItinerary() {
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[#001b26]/90 via-[#001b26]/40 to-transparent flex flex-col justify-end p-6 md:p-10">
-            <h1 className="text-3xl md:text-5xl font-bold text-white font-['Montserrat'] mb-3">
+            <h1 className="text-3xl md:text-5xl font-bold text-white font-heading mb-3">
               {trip.name}
             </h1>
             <div className="flex flex-wrap items-center gap-4 text-white/90 text-sm">
               <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4" /> {trip.destination}</span>
               <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4" /> {trip.startDate} to {trip.endDate}</span>
-              <span className="flex items-center gap-1.5"><DollarSign className="w-4 h-4" /> Est. ${trip.budget}</span>
+              <span className="flex items-center gap-1.5"><DollarSign className="w-4 h-4" /> Est. ₹{trip.budget}</span>
             </div>
           </div>
         </div>
@@ -104,14 +104,14 @@ export default function SharedItinerary() {
           {/* Main Content - Itinerary */}
           <div className="lg:col-span-2 space-y-6">
             <div className="card p-6">
-              <h2 className="text-lg font-bold text-[#0b1c30] font-['Montserrat'] mb-3">About this trip</h2>
+              <h2 className="text-lg font-bold text-[#0b1c30] font-heading mb-3">About this trip</h2>
               <p className="text-[#64748B] text-sm leading-relaxed">
                 {trip.description}
               </p>
             </div>
 
             <div className="space-y-6">
-              <h2 className="text-xl font-bold text-[#0b1c30] font-['Montserrat'] flex items-center gap-2">
+              <h2 className="text-xl font-bold text-[#0b1c30] font-heading flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-[#E8604C]" />
                 Itinerary Overview
               </h2>
@@ -120,7 +120,7 @@ export default function SharedItinerary() {
                 <div key={day.day} className="card overflow-hidden">
                   <div className="bg-[#f8fafc] border-b border-[#e2e8f0] p-4 flex justify-between items-center">
                     <div>
-                      <h3 className="font-bold text-[#0b1c30] font-['Montserrat']">Day {day.day}</h3>
+                      <h3 className="font-bold text-[#0b1c30] font-heading">Day {day.day}</h3>
                       <p className="text-xs text-[#64748B]">{day.date} • {day.location}</p>
                     </div>
                   </div>
@@ -150,7 +150,7 @@ export default function SharedItinerary() {
           {/* Sidebar - Actions */}
           <div className="space-y-6">
             <div className="card p-6 sticky top-24">
-              <h3 className="font-bold text-[#0b1c30] font-['Montserrat'] mb-4 flex items-center gap-2">
+              <h3 className="font-bold text-[#0b1c30] font-heading mb-4 flex items-center gap-2">
                 <Share2 className="w-4 h-4 text-[#E8604C]" />
                 Share this Trip
               </h3>
@@ -179,7 +179,7 @@ export default function SharedItinerary() {
               </div>
 
               <div className="mt-8 pt-6 border-t border-[#e2e8f0]">
-                <h3 className="font-bold text-[#0b1c30] font-['Montserrat'] text-sm mb-2">Like this trip?</h3>
+                <h3 className="font-bold text-[#0b1c30] font-heading text-sm mb-2">Like this trip?</h3>
                 <p className="text-xs text-[#64748B] mb-4">
                   Copy this itinerary to your own Traveloop account and customize it for your needs.
                 </p>

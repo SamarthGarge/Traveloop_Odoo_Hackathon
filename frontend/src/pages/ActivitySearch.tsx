@@ -55,7 +55,7 @@ export default function ActivitySearch() {
     <div className="page-transition">
       {/* Hero */}
       <div className="text-center mb-8">
-        <h1 className="text-3xl lg:text-4xl font-bold text-[#0b1c30] font-['Montserrat'] mb-2">
+        <h1 className="text-3xl lg:text-4xl font-bold text-[#0b1c30] font-heading mb-2">
           Where do you want to go?
         </h1>
         <p className="text-[#64748B] max-w-lg mx-auto">
@@ -109,7 +109,7 @@ export default function ActivitySearch() {
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-xl font-bold text-[#0b1c30] font-['Montserrat']">Trending Destinations</h2>
+            <h2 className="text-xl font-bold text-[#0b1c30] font-heading">Trending Destinations</h2>
             <p className="text-sm text-[#94a3b8] mt-0.5">Highly rated by the Traveloop community right now.</p>
           </div>
           <button className="text-sm text-[#64748B] hover:text-[#0b1c30] font-medium flex items-center gap-1 transition-colors">
@@ -149,7 +149,7 @@ export default function ActivitySearch() {
                     </span>
                   </div>
                 )}
-                <h3 className={`text-white font-bold font-['Montserrat'] ${i === 0 ? 'text-2xl lg:text-3xl' : 'text-base'}`}>
+                <h3 className={`text-white font-bold font-heading ${i === 0 ? 'text-2xl lg:text-3xl' : 'text-base'}`}>
                   {dest.name}, {dest.country}
                 </h3>
                 {i === 0 && (
@@ -165,7 +165,7 @@ export default function ActivitySearch() {
       {selectedCity && viewMode === 'activities' && (
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-4">
-            <h2 className="text-xl font-bold text-[#0b1c30] font-['Montserrat']">Activities in {selectedCity}</h2>
+            <h2 className="text-xl font-bold text-[#0b1c30] font-heading">Activities in {selectedCity}</h2>
             <button onClick={() => { setSelectedCity(''); setViewMode('cities'); }} className="text-sm text-[#94a3b8] hover:text-[#64748B]">Clear</button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

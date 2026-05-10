@@ -30,7 +30,7 @@ export default function ForgotPassword() {
           <div className="w-12 h-12 rounded-full bg-[#001b26] flex items-center justify-center mx-auto mb-4">
             <Compass className="w-6 h-6 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-[#0b1c30] tracking-tight mb-1 font-['Montserrat']">Reset Password</h1>
+          <h1 className="text-2xl font-bold text-[#0b1c30] tracking-tight mb-1 font-heading">Reset Password</h1>
           <p className="text-[#94a3b8] text-sm">We'll send you a link to reset your password</p>
         </div>
 

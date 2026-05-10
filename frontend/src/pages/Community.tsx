@@ -35,7 +35,7 @@ export default function Community() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-[#0b1c30] font-['Montserrat']">Community</h1>
+          <h1 className="text-2xl lg:text-3xl font-bold text-[#0b1c30] font-heading">Community</h1>
           <p className="text-[#64748B] text-sm mt-1">Discover stories, tips, and hidden gems from fellow travelers.</p>
         </div>
         <button className="btn-primary self-start text-sm">
@@ -49,7 +49,7 @@ export default function Community() {
           <img src="/images/dest-paris.jpg" alt="" className="w-full h-full object-cover" />
         </div>
         <div className="relative z-10">
-          <h2 className="text-xl font-bold text-white font-['Montserrat'] mb-2">Join the Conversation</h2>
+          <h2 className="text-xl font-bold text-white font-heading mb-2">Join the Conversation</h2>
           <p className="text-white/50 text-sm max-w-xl mb-4">
             Share your travel experiences, discover hidden gems, and get inspired by fellow explorers from around the world.
           </p>
@@ -122,7 +122,7 @@ export default function Community() {
                   <MapPin className="w-3 h-3" />
                   {post.destination}
                 </div>
-                <h3 className="font-bold text-[#0b1c30] text-base mb-1 font-['Montserrat']">{post.title}</h3>
+                <h3 className="font-bold text-[#0b1c30] text-base mb-1 font-heading">{post.title}</h3>
                 <p className="text-sm text-[#64748B] leading-relaxed mb-4">{post.content}</p>
                 
                 {/* Engagement Actions */}

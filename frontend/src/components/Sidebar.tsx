@@ -51,7 +51,7 @@ export default function Sidebar() {
               <Compass className="w-4.5 h-4.5 text-white" />
             </div>
             <div>
-              <h1 className="font-bold text-[15px] text-[#0b1c30] tracking-tight font-['Montserrat']">Traveloop</h1>
+              <h1 className="font-bold text-[15px] text-[#0b1c30] tracking-tight font-heading">Traveloop</h1>
               <p className="text-[10px] text-[#94a3b8] font-medium">Intelligent Concierge</p>
             </div>
           </Link>
@@ -145,7 +145,7 @@ export default function Sidebar() {
           <div className="w-8 h-8 rounded-full bg-[#001b26] flex items-center justify-center">
             <Compass className="w-4 h-4 text-white" />
           </div>
-          <span className="font-bold text-[15px] text-[#0b1c30] font-['Montserrat']">Traveloop</span>
+          <span className="font-bold text-[15px] text-[#0b1c30] font-heading">Traveloop</span>
         </Link>
         <div className="flex items-center gap-3">
           <button className="w-9 h-9 rounded-xl bg-[#f1f5f9] flex items-center justify-center text-[#64748B]">

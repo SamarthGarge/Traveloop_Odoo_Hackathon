@@ -18,7 +18,7 @@ const MOCK_CITIES = [
     name: 'Kyoto',
     country: 'Japan',
     region: 'Asia',
-    image: '/images/dest-kyoto.jpg',
+    image: '/images/image.png',
     costIndex: 3,
     popularity: 4.9,
     description: 'Historic temples, traditional gardens, and geisha districts.',
@@ -62,6 +62,76 @@ const MOCK_CITIES = [
     costIndex: 2,
     popularity: 4.5,
     description: 'Stunning coastal views, mountains, and rich history.',
+  },
+  {
+    id: 7,
+    name: 'London',
+    country: 'UK',
+    region: 'Europe',
+    image: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&q=80&w=800',
+    costIndex: 5,
+    popularity: 4.8,
+    description: 'Historic landmarks, modern culture, and royal heritage.',
+  },
+  {
+    id: 8,
+    name: 'Barcelona',
+    country: 'Spain',
+    region: 'Europe',
+    image: 'https://images.unsplash.com/photo-1583422409516-2895a77efded?auto=format&fit=crop&q=80&w=800',
+    costIndex: 3,
+    popularity: 4.7,
+    description: 'Art, Gaudí architecture, and Mediterranean beaches.',
+  },
+  {
+    id: 9,
+    name: 'Rio de Janeiro',
+    country: 'Brazil',
+    region: 'South America',
+    image: 'https://images.unsplash.com/photo-1483729558449-99ef09a8c325?auto=format&fit=crop&q=80&w=800',
+    costIndex: 3,
+    popularity: 4.6,
+    description: 'Iconic beaches, lush mountains, and vibrant carnival spirit.',
+  },
+  {
+    id: 10,
+    name: 'Sydney',
+    country: 'Australia',
+    region: 'Oceania',
+    image: 'https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?auto=format&fit=crop&q=80&w=800',
+    costIndex: 4,
+    popularity: 4.8,
+    description: 'Harbor city known for its Opera House and stunning beaches.',
+  },
+  {
+    id: 11,
+    name: 'Dubai',
+    country: 'UAE',
+    region: 'Asia',
+    image: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&q=80&w=800',
+    costIndex: 5,
+    popularity: 4.5,
+    description: 'Ultra-modern architecture, luxury shopping, and desert safaris.',
+  },
+  {
+    id: 13,
+    name: 'Buenos Aires',
+    country: 'Argentina',
+    region: 'South America',
+    image: 'https://images.unsplash.com/photo-1589909202802-8f4aadce1849?auto=format&fit=crop&q=80&w=800',
+    costIndex: 2,
+    popularity: 4.4,
+    description: 'Tango, steak, and beautiful European-style architecture.',
+  },
+  {
+    id: 14,
+    name: 'Vancouver',
+    country: 'Canada',
+    region: 'North America',
+    image: 'https://images.unsplash.com/photo-1559511260-66a654ae982a?auto=format&fit=crop&q=80&w=800',
+    costIndex: 4,
+    popularity: 4.6,
+    description: 'Bustling west coast seaport surrounded by stunning nature.',
   }
 ];
 
@@ -91,7 +161,7 @@ export default function CitySearch() {
       {/* Header */}
       <div className="mb-8">
         <p className="text-[10px] font-semibold tracking-widest text-[#94a3b8] uppercase mb-1">DISCOVER</p>
-        <h1 className="text-2xl lg:text-3xl font-bold text-[#0b1c30] font-['Montserrat']">City Search</h1>
+        <h1 className="text-2xl lg:text-3xl font-bold text-[#0b1c30] font-heading">City Search</h1>
         <p className="text-[#64748B] text-sm mt-2">Find and add perfect destinations to your itinerary.</p>
       </div>
 
@@ -153,7 +223,7 @@ export default function CitySearch() {
               
               <div className="p-5 flex flex-col flex-1">
                 <div className="mb-2">
-                  <h3 className="text-lg font-bold text-[#0b1c30] font-['Montserrat'] flex items-center justify-between">
+                  <h3 className="text-lg font-bold text-[#0b1c30] font-heading flex items-center justify-between">
                     {city.name}
                   </h3>
                   <div className="flex items-center text-[#64748B] text-xs mt-1 gap-3">
@@ -213,7 +283,7 @@ export default function CitySearch() {
       {filteredCities.length === 0 && (
         <div className="text-center py-20 card">
           <Globe className="w-12 h-12 text-[#e2e8f0] mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-[#0b1c30] font-['Montserrat']">No cities found</h3>
+          <h3 className="text-lg font-semibold text-[#0b1c30] font-heading">No cities found</h3>
           <p className="text-[#64748B] text-sm mt-2">Try adjusting your search or region filter.</p>
         </div>
       )}
